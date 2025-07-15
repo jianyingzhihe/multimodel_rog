@@ -71,4 +71,98 @@ graph TD
 
 
 # ROG方法改进
-1.基于最初的ROG代码，简单的将预测结果
+1.基于最初的ROG代码，简单的将预测结果以及推断的模型进行训练，从而获得类似标准答案风格的可以进行路径预测的模型，可解释性较差
+```mermaid
+graph TD
+    A[生成关系路径文件] --> B[基于路径预测]
+    B --> C[转换为训练数据]
+    C --> D[训练模型]
+    D --> E[推理预测]
+
+    style A fill:#f96,stroke:#333
+    style B fill:#6bf,stroke:#333
+    style C fill:#bbf,stroke:#333
+    style D fill:#dfd,stroke:#333
+    style E fill:#fdd,stroke:#333
+
+    classDef step fill:#f96,stroke:#333;
+    classDef predict fill:#6bf,stroke:#333;
+    classDef format fill:#bbf,stroke:#333;
+    classDef train fill:#dfd,stroke:#333;
+    classDef infer fill:#fdd,stroke:#333;
+
+    class A step
+    class B predict
+    class C format
+    class D train
+    class E infer
+
+```
+
+
+2.在上述基础上更改代码实现了简单的路径解释，并给出基于groundtruth的标准预测。
+
+
+
+```mermaid
+graph TD
+    A[生成关系路径文件] --> B[基于路径预测]
+    B --> C[添加路径解释]
+    C --> D[结合Ground Truth生成训练数据]
+    D --> E[训练模型]
+    E --> F[推理预测+路径输出]
+
+    style A fill:#f96,stroke:#333
+    style B fill:#6bf,stroke:#333
+    style C fill:#ffcc00,stroke:#333
+    style D fill:#bbf,stroke:#333
+    style E fill:#dfd,stroke:#333
+    style F fill:#fdd,stroke:#333
+
+    classDef step fill:#f96,stroke:#333;
+    classDef predict fill:#6bf,stroke:#333;
+    classDef explain fill:#ffcc00,stroke:#333;
+    classDef format fill:#bbf,stroke:#333;
+    classDef train fill:#dfd,stroke:#333;
+    classDef infer fill:#fdd,stroke:#333;
+
+    class A step
+    class B predict
+    class C explain
+    class D format
+    class E train
+    class F infer
+
+```
+
+3.引入了评分机制，通过束搜索同时生成多路径，并基于多路径生成多个预测，并在处理数据集时将最高分以及含有答案的预测放入其中，使得生成的答案具有完整的路径解释以及实际答案预测。
+```mermaid
+graph TD
+    A[生成关系路径文件] --> B[多路径束搜索预测]
+    B --> C[对多个路径评分]
+    C --> D[选择含答案的高分路径生成训练数据]
+    D --> E[训练模型]
+    E --> F[推理预测+最优路径输出]
+
+    style A fill:#f96,stroke:#333
+    style B fill:#6bf,stroke:#333
+    style C fill:#ffcc00,stroke:#333
+    style D fill:#bbf,stroke:#333
+    style E fill:#dfd,stroke:#333
+    style F fill:#fdd,stroke:#333
+
+    classDef step fill:#f96,stroke:#333;
+    classDef predict fill:#6bf,stroke:#333;
+    classDef score fill:#ffcc00,stroke:#333;
+    classDef format fill:#bbf,stroke:#333;
+    classDef train fill:#dfd,stroke:#333;
+    classDef infer fill:#fdd,stroke:#333;
+
+    class A step
+    class B predict
+    class C score
+    class D format
+    class E train
+    class F infer
+
+```
