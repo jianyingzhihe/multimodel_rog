@@ -1,5 +1,8 @@
+
+
 # 模型准确率对比
-OKVQA
+## OKVQA
+
 ### **基座模型：qwen**
 
 | 方法                     | 准确数量 / 总数   | 准确率    | 相比 Baseline 提升（百分点） | 相比 Baseline 提升百分比 |
@@ -12,8 +15,6 @@ OKVQA
 | ROG训练方法2               | 4550 / 5046 | 90.17% | +14.82 pp           | +19.67%           |
 | ROG训练方法3               | 4702 / 5046 | 93.18% | +17.83 pp           | +23.67%           |
 
- 
-
 ### **基座模型：gemma**
 
 | 方法                          | 准确数量 / 总数   | 准确率  | 相比 Baseline 提升（百分点） | 相比 Baseline 提升百分比 |
@@ -23,8 +24,6 @@ OKVQA
 | 训练（普通 LoRA）                 | 3501 / 5046 | 69.38% | -8.44 pp            | -10.85%           |
 | RoG 方法                      | 4031 / 5046 | 79.89% | +2.07 pp            | +2.66%            |
 | ROG训练方法3                    | 4654 / 5046   | 92.23%     | +14.41 pp           | +18.51%           |
-
-
 
 ### **基座模型：llama**
 
@@ -36,16 +35,16 @@ OKVQA
 | RoG 方法                      | 3702 / 5046 | 73.36% | +3.15 pp            | +4.49%            |
 | ROG训练方法3                    | 4676 / 5046 | 92.67% | +22.46pp            | 31.98%            |
 
+---
 
+# 用户需求与解决方案
 
-# 一.用户想要用ROG
-直接对验证集或者单个的KQA问题
- 
-    -1.生成关系路径1.jsonl
-    -2.基于1.jsonl进行ROG预测，2.jsonl
+## 一、用户想要用ROG直接对验证集或者单个KQA问题进行处理
 
+- 生成关系路径 `1.jsonl`
+- 基于 `1.jsonl` 进行ROG预测，得到 `2.jsonl`
 
-# 二。用户想获得一个能直接用ROG方法的模型
+## 二、用户想获得一个能直接用ROG方法的模型
 
 ```mermaid
 graph TD
@@ -63,17 +62,32 @@ graph TD
     style D fill:#dfd,stroke:#333,stroke-width:2px
     style E fill:#fdd,stroke:#333,stroke-width:2px
 
-```
-1.生成关系路径1.jsonl
-2.基于1.jsonl进行ROG预测，2.jsonl
-3.2.jsonl转化为2.json->train
-4.基于2.json训练
-5.基于训练好的模型进行推断
-对训练集进行运行
+classDef step fill:#f96,stroke:#333;
+classDef predict fill:#6bf,stroke:#333;
+classDef format fill:#bbf,stroke:#333;
+classDef train fill:#dfd,stroke:#333;
+classDef infer fill:#fdd,stroke:#333;
 
+class A step
+class B predict
+class C format
+class D train
+class E infer
+```
+
+**步骤流程：**
+1. 生成关系路径 `1.jsonl`
+2. 基于 `1.jsonl` 进行ROG预测，得到 `2.jsonl`
+3. 将 `2.jsonl` 转化为训练数据格式 `2_train.json`
+4. 使用 `2_train.json` 对模型进行训练
+5. 使用训练好的模型进行推断
+
+---
 
 # ROG方法改进
-1.基于最初的ROG代码，简单的将预测结果以及推断的模型进行训练，从而获得类似标准答案风格的可以进行路径预测的模型，可解释性较差
+
+## 改进方案1：基础版ROG训练流程
+
 ```mermaid
 graph TD
     A[生成关系路径文件] --> B[基于路径预测]
@@ -98,13 +112,13 @@ graph TD
     class C format
     class D train
     class E infer
-
 ```
 
+该方案简单地将预测结果转化为训练数据并重新训练模型，但可解释性较差。
 
-2.在上述基础上更改代码实现了简单的路径解释，并给出基于groundtruth的标准预测。
+---
 
-
+## 改进方案2：引入路径解释
 
 ```mermaid
 graph TD
@@ -134,10 +148,14 @@ graph TD
     class D format
     class E train
     class F infer
-
 ```
 
-3.引入了评分机制，通过束搜索同时生成多路径，并基于多路径生成多个预测，并在处理数据集时将最高分以及含有答案的预测放入其中，使得生成的答案具有完整的路径解释以及实际答案预测。
+此方案在基础之上增加了路径解释功能，并结合 Ground Truth 数据生成更高质量的训练样本。
+
+---
+
+## 改进方案3：多路径评分机制
+
 ```mermaid
 graph TD
     A[生成关系路径文件] --> B[多路径束搜索预测]
@@ -166,8 +184,97 @@ graph TD
     class D format
     class E train
     class F infer
-
 ```
 
+本方案通过多路径生成与评分机制，提升了预测结果的多样性和准确性，并保证最终输出具有完整的路径解释。
 
-# 2.quickstart
+---
+
+# 快速开始指南 (Quickstart)
+
+## 第0步：配置环境
+
+```shell
+conda env create --file environment.yml --name rog
+conda activate rog
+```
+
+> **注意：** Flash Attention 可选安装，请参考其官方文档获取更多信息。
+
+---
+
+## 第一步：下载数据集并解压
+
+```shell
+pip install modelscope
+modelscope download --dataset OmniData/OK-VQA --local_dir ./data
+unzip ./data/*.zip
+```
+
+---
+
+## 在此目录下运行推断代码
+
+### 第一个脚本：生成关系路径（仅关键词）
+
+请根据需要调整参数：
+
+```shell
+bash ./scripts/planning.sh 
+```
+
+### 第二个脚本：生成对应关系路径的推理结果
+
+输入文件必须是上一步的输出文件：
+
+```shell
+bash ./scripts/rog-reasoning.sh
+```
+
+---
+
+## 在此目录下进行ROG方法的模型训练
+
+### 步骤1：生成关系路径（用于训练模式）
+
+请根据需要调整参数并启用训练模式：
+
+```shell
+bash ./scripts/planning.sh 
+```
+
+### 步骤2：生成推理结果
+
+输入文件必须是上一步的输出文件：
+
+```shell
+bash ./scripts/rog-reasoning.sh
+```
+
+### 步骤3：生成可用于训练的数据集
+
+请修改文件路径以匹配上一步的输出文件：
+
+```shell
+python ./src/finetuning/generate.py
+```
+
+### 步骤4：进行模型训练
+
+```shell
+bash ./src/finetuning/train.sh
+```
+
+完成训练后，你将获得一个经过ROG训练的模型。
+
+---
+
+### 使用训练好的模型进行推理（可选）
+
+可以直接使用如下命令进行验证：
+
+```shell
+python ./validatelora.py
+```
+
+---

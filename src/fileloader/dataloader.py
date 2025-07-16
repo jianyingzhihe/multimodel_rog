@@ -23,8 +23,8 @@ def format_image_name(image_id,type="val"):
 class datas():
     def __init__(self,datapath,type="val"):
         print("initialing the datas")
-        qp=os.path.join(datapath,f"{type}_questions.json")
-        ap=os.path.join(datapath,f"{type}.json")
+        qp=os.path.join(datapath,f"OpenEnded_mscoco_{type}2014_questions.json")
+        ap=os.path.join(datapath,f"mscoco_{type}2014_annotations.json")
         ip=os.path.join(datapath,f"{type}2014")
         self.question,self.image,self.answer=self.load_json(qp,ap,ip,type)
         self.processdatas(type=type)
