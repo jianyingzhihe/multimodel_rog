@@ -1,57 +1,64 @@
-from modelscope import AutoModelForCausalLM, AutoTokenizer
+import time
+import json
+import os
+
+import PIL
+import tqdm
+import os
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+from src.fileloader.llama import datas, llamamod
 
 
-# 模型路径
-model_path = "/root/autodl-tmp/RoG/qwen/output/v11-20250710-145738/checkpoint-201"
+def generate(model, dataset, outputdir):
+    """
+    使用给定的模型对数据集中的每个条目进行推理，并将结果保存为jsonl格式的文件。
+    :param model: 已加载的模型实例。
+    :param dataset: 数据集实例。
+    :param outputdir: 输出目录路径。
+    """
+    output_path = outputdir
+    with open(output_path, 'w', encoding='utf-8') as f:
+        batch=[]
+        for each in tqdm.tqdm(dataset.combined, desc="Processing images"):
+            try:
+                id = each["id"]
+                image_path = each["image_path"]
+                image_path=os.path.join("/root/autodl-tmp/RoG/qwen",image_path)
+                print(image_path)
 
-# 加载模型和 tokenizer
-model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    torch_dtype="auto",
-    device_map="auto",
-    local_files_only=True
-)
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+                question = each["question"]
+                image_file_url="file:///"+image_path
+                messages = [
+                {"role": "system",
+                 "content": "你是视觉推理助手。请先识别图像中的对象及其属性，然后根据问题构建合理的关系路径，最后给出答案。"},
+                    {"role": "user",
+                     "content": [{"type": "image_url", "image_url": {"url":image_file_url}}, {"type": "text", "text": question}]}
+                ]
 
-# 系统提示词
-with open("../remp/story.txt", "r", encoding="utf-8") as f:
-    sys_prompt = f.read()
 
-# 对话循环
-while True:
-    try:
-        quest = input("User: ").strip()
-        if not quest:
-            break
+                result = model.inf_with_messages(messages=messages)
 
-        # 构建 chat 消息结构
-        messages = [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": quest}
-        ]
+                    # 创建包含必要信息的字典
+                output_dict = {
+                        "id": id,
+                        "question": question,
+                        "answer": result
+                    }
 
-        # 使用 Qwen 的 chat 模板构造输入
-        text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
+                # 将字典转换为JSON字符串并写入文件
+                f.write(json.dumps(output_dict, ensure_ascii=False) + "\n")
+                f.flush()
+            except Exception as e:
+                print(e,id)
 
-        # ✅ 注意：这里不要加 [] 把 text 变成列表，除非你要批量处理
-        model_inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
-        # 生成回复
-        generated_ids = model.generate(
-            **model_inputs,
-            max_new_tokens=512
-        )
+# 示例调用
+datapath = "./data/OKVQA"
+modelpath = "./multimodels/meta-llama/llama"
+outputdir = "./output_with_system_token_llama.jsonl"  # 指定输出目录
 
-        # 去除输入部分，只保留生成内容
-        generated_ids = generated_ids[:, model_inputs['input_ids'].shape[-1]:]
+dataset = datas(datapath)
+model = llamamod(modelpath,type="vllm")
 
-        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        print(f"Assistant: {response}")
-
-    except KeyboardInterrupt:
-        print("\n👋 推理已手动中断。")
-        break
+generate(model=model, dataset=dataset, outputdir=outputdir)
+dataset.evaluate_jsonl(outputdir)
