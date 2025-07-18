@@ -8,7 +8,6 @@ import os
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 from src.fileloader.llama import datas, llamamod
 
-
 def generate(model, dataset, outputdir):
     """
     使用给定的模型对数据集中的每个条目进行推理，并将结果保存为jsonl格式的文件。
