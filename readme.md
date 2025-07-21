@@ -3,7 +3,8 @@
 # 模型准确率对比
 ## OKVQA
 
-gemini2.5-flash:4132/5046，正确率81.89%
+闭源先进模型：gemini2.5-flash:4132/5046，正确率81.89%
+开源先进模型：inclusionAI/M2-Reasoning：
 ### **基座模型：qwen**
 
 | 方法                   | 准确数量 / 总数   | 准确率    | 相比 Baseline 提升（百分点） | 相比 Baseline 提升百分比 |
