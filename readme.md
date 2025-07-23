@@ -3,9 +3,9 @@
 # 模型准确率对比
 ## OKVQA
 
-闭源先进模型：gemini2.5-flash:4132/5046，正确率81.89%。
-开源先进模型：inclusionAI/M2-Reasoning：4067 / 5046， 正确率确率80.60%。
+### 闭源先进模型：gemini2.5-flash:4132/5046，正确率81.89%。
 
+### 开源先进模型：inclusionAI/M2-Reasoning：4067 / 5046， 正确率确率80.60%。
 
 ### **基座模型：qwen**
 
@@ -41,7 +41,7 @@
 
 相同的基座模型llama3.2-11b,[llama-cot](https://github.com/PKU-YuanGroup/LLaVA-CoT)的结果为：
 
-3968/5046，准确率: 78.64%
+3968/5046，准确率: 78.64%  
 
 ---
 
