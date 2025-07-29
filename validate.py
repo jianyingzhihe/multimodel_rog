@@ -3,7 +3,7 @@ import json
 import tqdm
 import os
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
-from src.fileloader import dataf, qwenmod
+from src.fileloader import dataf, qwenmod,datap,datas
 
 
 def generate(model, dataset, outputdir):
@@ -56,11 +56,15 @@ def generate(model, dataset, outputdir):
 
 # 示例调用
 if __name__ == "__main__":
-
-    qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
-    image="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
-    ds=dataf(qapath,image)
-    # ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
+    dataset_type="fvqa"
+    if dataset_type=="fvqa":
+        qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+        image="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
+        ds=dataf(qapath,image)
+    if dataset_type=="aokvqa":
+        ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
+    if dataset_type=="okvqa":
+        ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA/")
     modelpath = "./multimodels/Qwen/qwenvl"
     outputdir = "./output_with_system_token_qwen_AOKVQA.jsonl"  # 指定输出目录
     model = qwenmod(modelpath,type="hf")
