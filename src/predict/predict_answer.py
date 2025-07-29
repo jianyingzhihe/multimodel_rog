@@ -3,7 +3,9 @@ import os
 import json
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/..")
 from tqdm import tqdm
-from fileloader.qwen import *  # 假设 dataloader.py 在当前目录下
+from fileloader.qwen import *
+from fileloader.llama import *
+from fileloader.gemma import *
 import argparse
 # # 导入 eval_result 函数
 # from evaluate_results import eval_result  # 确保路径正确
@@ -105,7 +107,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run multi-modal QA prediction with Qwen2.5-VL")
-
     parser.add_argument("--data_dir", type=str, default="../data/OKVQA", help="Path to the OKVQA dataset")
     parser.add_argument("--split", type=str, default="val", choices=["train", "val"], help="Dataset split (train or val)")
     parser.add_argument("--predict_path", type=str, default="results/multimodal", help="Directory to save predictions")
@@ -118,6 +119,12 @@ if __name__ == "__main__":
     parser.add_argument('--cal_f1', action="store_true", help="Calculate F1 score")
     parser.add_argument("--rule_path",type=str,default=f"./results/gen_rule_path/",help="Path to the generated rules")
     parser.add_argument("--engine_type",type=str,default="hf")
+    parser.add_argument(
+        "--qapath",help="find a file named all_qs_dict_release.json"
+    )
+    parser.add_argument(
+        "--image",help="find a directory named image"
+    )
     args = parser.parse_args()
 
     main(args)

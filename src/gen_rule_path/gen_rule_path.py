@@ -11,6 +11,8 @@ import os
 import re
 
 from fileloader.qwen import *
+from fileloader.llama import *
+from fileloader.gemma import *
 
 N_CPUS = (
     int(os.environ["SLURM_CPUS_PER_TASK"]) if "SLURM_CPUS_PER_TASK" in os.environ else 1
@@ -108,10 +110,17 @@ def generatembody(ans):
 
 def gen_prediction(args):
     print(args)
-    model = qwenmod(args.model_path)
-    qapath = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
-    image = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
-    ds=dataf(qapath,image)
+    if args.model_name == "qwen":
+        model = qwenmod(args.model_path)
+    elif args.model_name == "llama":
+        model = llamamod(args.model_path)
+    elif args.model_name == "gemma":
+        model = gemmamod(args.model_path)
+    else:
+        print("Unknown model name")
+        sys.exit(1)
+
+    ds=dataf(args.qapath,args.image)
 
     output_dir = os.path.join(args.output_path, args.d, args.model_name, args.split)
     print("Save results to: ", output_dir)
@@ -192,6 +201,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--force", "-f", action="store_true", help="force to overwrite the results"
     )
+    parser.add_argument(
+        "--qapath",help="find a file named all_qs_dict_release.json"
+    )
+    parser.add_argument(
+        "--image",help="find a directory named image"
+    )
+    # qapath = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+    # image = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
     parser.add_argument("--debug", action="store_true", help="Debug")
     parser.add_argument("--lora", action="store_true", help="load lora weights")
     parser.add_argument("--max_new_tokens", type=int, default=100)

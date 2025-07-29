@@ -6,4 +6,6 @@ python ./src/predict/predict_answer.py \
     --predict_path results/multimodal \
     --rule_path results/gen_rule_path/OKVQA/llama/train/predictions_3_False_train.jsonl\
     --model_path multimodels/meta-llama/llama \
-    --engine_type vllm
+    --engine_type vllm \
+    --qapath /root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json \
+    --image /root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images
