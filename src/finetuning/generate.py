@@ -2,7 +2,7 @@ import json
 import sys
 
 sys.path.append('/root/autodl-tmp/RoG/qwen/src/')
-from fileloader.dataloader import datas
+from fileloader.dataloader import dataf
 
 # 系统提示语
 SYSTEM_PROMPT = (
@@ -27,12 +27,12 @@ def extract_predicted_paths(input_text):
     return input_text[start_index:end_index].strip()
 
 
-def convert_jsonl_line(line, dataset_str):
+def convert_jsonl_line(line, dataset_str,dataset,image_path):
     data = json.loads(line)
 
     # 提取字段
     qid = int(data["id"])
-    question = data["question"]
+    question = dataset.getquestion(qid)
     generated_answers = data.get("prediction")
     first_answer = generated_answers[0] if generated_answers else ""
 
@@ -47,8 +47,6 @@ def convert_jsonl_line(line, dataset_str):
         {"role": "assistant", "content": assistant_content +" Therefore, the possible answers include: " +dataset_str},
     ]
 
-    # 构造 images
-    image_path = IMAGE_PATH_TEMPLATE.format(qid)
 
     # 组合成单个样本结构
     return {
@@ -64,17 +62,11 @@ def process_jsonl_to_json(input_path, output_path, dataset):
         i=0
         for idx, line in enumerate(fin):
             try:
-                # 去重处理
-                unique_answers = set()
-                sss = []
-                for each in dataset.combined[i]["answer"]:
-                    answer = each["answer"]
-                    if answer not in unique_answers:
-                        unique_answers.add(answer)
-                        sss.append(answer)
+
+                dataset_str =dataset.train[i].answer
+                image_path = dataset.train[i].image
+                converted = convert_jsonl_line(line, dataset_str,dataset, image_path)
                 i+=1
-                dataset_str = ",".join(sss)
-                converted = convert_jsonl_line(line, dataset_str)
                 results.append(converted)
 
                 if idx % 1000 == 0:
@@ -91,7 +83,9 @@ def process_jsonl_to_json(input_path, output_path, dataset):
 
 
 # 示例调用
-input_jsonl = "/root/autodl-tmp/RoG/qwen/results/multimodal/OKVQA/llama/train/predictions.jsonl"  # 替换为你的输入文件路径
-output_json = "converted_output_llama.json"  # 输出为 .json 文件
-dataset = datas("/root/autodl-tmp/RoG/qwen/data/OKVQA", type="train")
+input_jsonl = "/root/autodl-tmp/RoG/qwen/results/multimodal/OKVQA/qwen/train/predictions.jsonl"  # 替换为你的输入文件路径
+output_json = "converted_output_qwen_FVQA.json"  # 输出为 .json 文件
+qapath = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+image = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
+dataset = dataf(qapath, image)  # 加载 OKVQA
 process_jsonl_to_json(input_jsonl, output_json, dataset)

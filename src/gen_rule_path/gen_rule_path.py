@@ -10,7 +10,7 @@ from tqdm import tqdm
 import os
 import re
 
-from fileloader.llama import *
+from fileloader.qwen import *
 
 N_CPUS = (
     int(os.environ["SLURM_CPUS_PER_TASK"]) if "SLURM_CPUS_PER_TASK" in os.environ else 1
@@ -108,8 +108,10 @@ def generatembody(ans):
 
 def gen_prediction(args):
     print(args)
-    model = llamamod(args.model_path)
-    okvqadata = datas(args.data_path,type=args.split)
+    model = qwenmod(args.model_path)
+    qapath = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+    image = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
+    ds=dataf(qapath,image)
 
     output_dir = os.path.join(args.output_path, args.d, args.model_name, args.split)
     print("Save results to: ", output_dir)
@@ -120,10 +122,10 @@ def gen_prediction(args):
     prediction_file = os.path.join(output_dir, f"predictions_{args.n_beam}_{args.do_sample}_{args.split}.jsonl")
 
     with open(prediction_file, "w") as f:
-        for data in tqdm(okvqadata.combined):
-            question = INSTRUCTION + data["question"]
-            qid = data["id"]
-            pictpath = data["image_path"]
+        for data in tqdm(ds.train):
+            question = INSTRUCTION + data.question
+            qid = data.id
+            pictpath = data.image
 
             raw_output = generate_seq(
                 model,

@@ -3,7 +3,7 @@ import os
 import json
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/..")
 from tqdm import tqdm
-from fileloader.llama import *  # 假设 dataloader.py 在当前目录下
+from fileloader.qwen import *  # 假设 dataloader.py 在当前目录下
 import argparse
 # # 导入 eval_result 函数
 # from evaluate_results import eval_result  # 确保路径正确
@@ -33,10 +33,10 @@ def format_paths(paths, title="Predicted Paths"):
 
 def main(args):
     print("Loading dataset...")
-    dataset = datas(args.data_dir, type=args.split)  # 加载 OKVQA
-    print(args.model_path)
-    print(os.getcwd())
-    model = llamamod(modelpath=args.model_path,type="hf")
+    qapath = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+    image = "/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
+    dataset = dataf(qapath,image)  # 加载 OKVQA
+    model = qwenmod(modelpath=args.model_path,type="hf")
 
     output_dir = os.path.join(
         args.predict_path,
@@ -50,7 +50,7 @@ def main(args):
     output_file = os.path.join(output_dir, "predictions.jsonl")
     fout, processed_list = get_output_file(output_file, force=args.force)
 
-    total = len(dataset.combined)
+    total = len(dataset.train)
     correct = 0
     generated_rule_path=[]
     with open(args.rule_path, "r") as f:
@@ -59,12 +59,11 @@ def main(args):
             generated_rule_path.append(data)
     if(len(generated_rule_path)==total):
         i=0
-        for item in tqdm(dataset.combined, total=total):
-            image_id = item["id"]
-            raw_question = item["question"]  # 原始问题
-            image_path = item["image_path"]
-            ground_truth = [ans["answer"] for ans in item["answer"]]
-            print(image_id)
+        for item in tqdm(dataset.train, total=total):
+            image_id = item.id
+            raw_question = item.question  # 原始问题
+            image_path = item.image
+            ground_truth = item.answer
             # 获取预测路径 & 真实路径
             rule_data = generated_rule_path[i]
             i+=1
