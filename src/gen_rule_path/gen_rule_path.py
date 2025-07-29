@@ -12,7 +12,7 @@ import re
 
 from fileloader.qwen import *
 from fileloader.llama import *
-from fileloader.gemma import *
+from fileloader.google import *
 
 N_CPUS = (
     int(os.environ["SLURM_CPUS_PER_TASK"]) if "SLURM_CPUS_PER_TASK" in os.environ else 1

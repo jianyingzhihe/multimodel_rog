@@ -1,12 +1,10 @@
-import time
 import json
-import os
 
-import PIL
 import tqdm
 import os
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
-from src.fileloader.llama import datas, llamamod
+from src.fileloader import dataf, qwenmod
+
 
 def generate(model, dataset, outputdir):
     """
@@ -16,48 +14,55 @@ def generate(model, dataset, outputdir):
     :param outputdir: 输出目录路径。
     """
     output_path = outputdir
-    with open(output_path, 'w', encoding='utf-8') as f:
+    td=[]
+    with open(outputdir) as f:
+        for line in f:
+            temp=json.loads(line)
+            id=temp["id"]
+            td.append(id)
+    print(td)
+    with open(output_path, 'a', encoding='utf-8') as f:
         batch=[]
         for each in tqdm.tqdm(dataset.combined, desc="Processing images"):
+            id = each.id
+            if id in td:
+                continue
             try:
-                id = each["id"]
-                image_path = each["image_path"]
-                image_path=os.path.join("/root/autodl-tmp/RoG/qwen",image_path)
-                print(image_path)
-
-                question = each["question"]
-                image_file_url="file:///"+image_path
+                image = each.image
+                question = each.question
                 messages = [
-                {"role": "system",
-                 "content": "你是视觉推理助手。请先识别图像中的对象及其属性，然后根据问题构建合理的关系路径，最后给出答案。"},
-                    {"role": "user",
-                     "content": [{"type": "image_url", "image_url": {"url":image_file_url}}, {"type": "text", "text": question}]}
-                ]
-
-
-                result = model.inf_with_messages(messages=messages)
-
-                    # 创建包含必要信息的字典
+                    {"role":"system",
+                     "content":[
+                         {"type":"text","text":"You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English."},
+                     ]},
+                        {"role": "user",
+                         "content": [{"type": "image","image":image}, {"type": "text", "text": {question}}]}
+                    ]
+                result = model.inf_with_messages(messages)
                 output_dict = {
-                        "id": id,
-                        "question": question,
-                        "answer": result
-                    }
-
-                # 将字典转换为JSON字符串并写入文件
+                            "id": id,
+                            "question": question,
+                            "answer": result
+                        }
                 f.write(json.dumps(output_dict, ensure_ascii=False) + "\n")
                 f.flush()
             except Exception as e:
-                print(e,id)
+                print(id)
+                batch.append(id)
+                print(e)
+        print(batch)
+
 
 
 # 示例调用
-datapath = "./data/OKVQA"
-modelpath = "./multimodels/meta-llama/llama"
-outputdir = "./output_with_system_token_llama.jsonl"  # 指定输出目录
+if __name__ == "__main__":
 
-dataset = datas(datapath)
-model = llamamod(modelpath,type="vllm")
-
-generate(model=model, dataset=dataset, outputdir=outputdir)
-dataset.evaluate_jsonl(outputdir)
+    qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
+    image="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
+    ds=dataf(qapath,image)
+    # ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
+    modelpath = "./multimodels/Qwen/qwenvl"
+    outputdir = "./output_with_system_token_qwen_AOKVQA.jsonl"  # 指定输出目录
+    model = qwenmod(modelpath,type="hf")
+    generate(model=model, dataset=ds, outputdir=outputdir)
+    # ds.evaluate_jsonl(outputdir)
