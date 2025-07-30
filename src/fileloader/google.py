@@ -4,6 +4,7 @@ import torch
 from PIL import Image
 from PIL.JpegImagePlugin import samplings
 from transformers import AutoProcessor
+# from qwen_vl_utils import process_vision_info
 from modelscope import Gemma3ForConditionalGeneration
 from .dataloader import *
 from .multi import BaseMultiModalModel
@@ -11,7 +12,7 @@ from vllm import LLM,SamplingParams
 from vllm.sampling_params import BeamSearchParams
 
 class googlemod(BaseMultiModalModel):
-    def _load_model(self,type="hf",max_tokens=512):
+    def _load_model(self,type="hf",max_tokens=512,allowed_local_media_path=None, **kwargs):
         self.type=type
         self.modeltype="gemma"
         if type=="hf":
@@ -34,7 +35,7 @@ class googlemod(BaseMultiModalModel):
                              tensor_parallel_size=num_gpus,
                              enable_prefix_caching=True,
                              gpu_memory_utilization=0.9,
-                             allowed_local_media_path="/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
+                             allowed_local_media_path=allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
                              limit_mm_per_prompt={"image": 1,"video": 0},
                              max_model_len=9000,
                              max_num_seqs=1)
