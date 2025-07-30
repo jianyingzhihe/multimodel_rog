@@ -12,7 +12,7 @@ from vllm.sampling_params import BeamSearchParams
 
 
 class qwenmod(BaseMultiModalModel):
-    def _load_model(self,type="hf",max_tokens=512,allowed_local_media_path=None, **kwargs):
+    def _load_model(self,type="hf",max_tokens=512,allowed_local_media_path=None, use_auth_token=None, **kwargs):
         self.modeltype="qwen"
         self.type=type
         if type=="hf":
@@ -28,14 +28,23 @@ class qwenmod(BaseMultiModalModel):
             self.sampling_params = SamplingParams(
                 max_tokens=max_tokens,  # 修改这里：增加最大输出 token 数量
             )
-            self.model = LLM(model=self.modelpath,
-                             tensor_parallel_size=num_gpus,
-                             enable_prefix_caching=True,
-                             gpu_memory_utilization=0.9,
-                             allowed_local_media_path=allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
-                             limit_mm_per_prompt={"image": 1,"video": 0},
-                             max_model_len=4096,
-                             max_num_seqs=2)
+            vllm_kwargs = {
+                "model": self.modelpath,
+                "tensor_parallel_size": num_gpus,
+                "trust_remote_code": True,
+                "tokenizer_mode": "auto",
+                "dtype": torch.bfloat16,
+                "enable_prefix_caching": True,
+                "gpu_memory_utilization": 0.9,
+                "allowed_local_media_path": allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
+                "limit_mm_per_prompt": {"image": 1,"video": 0},
+                "max_model_len": 4096,
+                "max_num_seqs": 2
+            }
+            if use_auth_token:
+                vllm_kwargs["use_auth_token"] = use_auth_token
+            
+            self.model = LLM(**vllm_kwargs)
 
     def inf_question_image(self, question: str, image: Image.Image):
         # 确保 image 是 PIL.Image 对象
