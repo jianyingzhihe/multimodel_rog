@@ -26,13 +26,23 @@ def generate(model, dataset, outputdir, use_system=True):
     :param use_system: 是否使用system prompt。
     """
     output_path = outputdir
+    # 确保输出目录存在
+    output_dir = os.path.dirname(outputdir)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"Created output directory: {output_dir}")
+    
     td=[]
-    with open(outputdir) as f:
-        for line in f:
-            temp=json.loads(line)
-            id=temp["id"]
-            td.append(id)
-    print(td)
+    # 检查输出文件是否存在，如果存在则读取已处理的ID
+    if os.path.exists(outputdir):
+        with open(outputdir) as f:
+            for line in f:
+                temp=json.loads(line)
+                id=temp["id"]
+                td.append(id)
+        print(f"Found {len(td)} already processed items")
+    else:
+        print("Output file does not exist, starting from scratch")
     with open(output_path, 'a', encoding='utf-8') as f:
         batch=[]
         for each in tqdm.tqdm(dataset.combined, desc="Processing images"):
