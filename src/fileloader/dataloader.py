@@ -331,4 +331,4 @@ if __name__ == "__main__":
     #     print(each.id)
     # ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
     # ds.createimg()
-    ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA")
+    print("running this file") #ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA")
