@@ -146,6 +146,8 @@ if __name__ == "__main__":
     parser.add_argument("--infer_type", type=str, default="vllm",
                        choices=["hf", "vllm"],
                        help="Inference type to use")
+    parser.add_argument("--auth_token", type=str, default=None,
+                       help="Hugging Face authentication token for gated models")
     
     args = parser.parse_args()
     
@@ -164,11 +166,11 @@ if __name__ == "__main__":
 
     #加载不同模型
     if args.modeltype=="qwen":
-        model = qwenmod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model = qwenmod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
     elif args.modeltype=="gemma" or args.modeltype=="google":
-        model=googlemod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model=googlemod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
     elif args.modeltype=="llama":
-        model=llamamod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model=llamamod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
     elif args.modeltype=="intern":
         model=internmod(args.modelpath)
 
