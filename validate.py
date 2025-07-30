@@ -4,7 +4,7 @@ import tqdm
 import os
 from distutils.util import strtobool
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
-from src.fileloader import dataf, qwenmod,datap,datas,googlemod,llamamode,internmod
+from src.fileloader import dataf, qwenmod, datap, datas, googlemod, llamamod, internmod
 
 
 def generate(model, dataset, outputdir, use_system=True):
@@ -77,16 +77,16 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_type", type=str, default="fvqa", 
                        choices=["fvqa", "aokvqa", "okvqa"],
                        help="Type of dataset to use")
-    parser.add_argument("--modeltype", type=str, default="intern",
+    parser.add_argument("--modeltype", type=str, default="qwen",
                        choices=["qwen", "gemma", "google", "llama", "intern"],
                        help="Type of model to use")
-    parser.add_argument("--modelpath", type=str, default="./multimodels/Qwen/qwenvl",
+    parser.add_argument("--modelpath", type=str, default="Qwen/Qwen2.5-VL-72B-Instruct",
                        help="Path to the model")
-    parser.add_argument("--outputdir", type=str, default="./output_with_system_token_qwen_AOKVQA.jsonl",
+    parser.add_argument("--outputdir", type=str, default="/home/z_wen/Kbvqa/multimodal_rog/res/output_no_system_qwen72b_fvqa.jsonl",
                        help="Output directory for results")
-    parser.add_argument("--system", type=lambda x: bool(strtobool(x)), default=True,
+    parser.add_argument("--system", type=lambda x: bool(strtobool(x)), default=False,
                        help="Whether to use system prompt (true/false)")
-    parser.add_argument("--infer_type", type=str, default="hf",
+    parser.add_argument("--infer_type", type=str, default="vllm",
                        choices=["hf", "vllm"],
                        help="Inference type to use")
     
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     elif args.modeltype=="gemma" or args.modeltype=="google":
         model=googlemod(args.modelpath, type=args.infer_type)
     elif args.modeltype=="llama":
-        model=llamamode(args.modelpath, type=args.infer_type)
+        model=llamamod(args.modelpath, type=args.infer_type)
     elif args.modeltype=="intern":
         model=internmod(args.modelpath)
 
