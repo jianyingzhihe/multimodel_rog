@@ -53,20 +53,50 @@ def generate(model, dataset, outputdir, use_system=True):
                 image = each.image
                 question = each.question
                 
-                if use_system:
-                    messages = [
-                        {"role":"system",
-                         "content":[
-                             {"type":"text","text":"You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English."},
-                         ]},
-                        {"role": "user",
-                         "content": [{"type": "image","image":image}, {"type": "text", "text": question}]}
-                    ]
+                # 为 VLLM 构造 URL 格式的图像路径
+                if model.type == "vllm":
+                    # 构造完整的图像路径
+                    if not os.path.isabs(image):
+                        # 如果是相对路径，使用 image_path 作为基础路径
+                        full_image_path = os.path.join(image_path, image)
+                    else:
+                        full_image_path = image
+                    
+                    # 确保路径存在
+                    if not os.path.exists(full_image_path):
+                        print(f"Warning: Image file not found: {full_image_path}")
+                    
+                    image_file_url = "file:///" + full_image_path
+                    print(f"Image URL: {image_file_url}")
+                    
+                    if use_system:
+                        messages = [
+                            {"role":"system",
+                             "content": "You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English."},
+                            {"role": "user",
+                             "content": [{"type": "image_url", "image_url": {"url": image_file_url}}, {"type": "text", "text": question}]}
+                        ]
+                    else:
+                        messages = [
+                            {"role": "user",
+                             "content": [{"type": "image_url", "image_url": {"url": image_file_url}}, {"type": "text", "text": question}]}
+                        ]
                 else:
-                    messages = [
-                        {"role": "user",
-                         "content": [{"type": "image","image":image}, {"type": "text", "text": question}]}
-                    ]
+                    # 对于 HF 模式，使用原来的格式
+                    if use_system:
+                        messages = [
+                            {"role":"system",
+                             "content":[
+                                 {"type":"text","text":"You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English."},
+                             ]},
+                            {"role": "user",
+                             "content": [{"type": "image","image":image}, {"type": "text", "text": question}]}
+                        ]
+                    else:
+                        messages = [
+                            {"role": "user",
+                             "content": [{"type": "image","image":image}, {"type": "text", "text": question}]}
+                        ]
 
                 if model.modeltype == "intern":
                     if use_system:
@@ -88,6 +118,7 @@ def generate(model, dataset, outputdir, use_system=True):
                 batch.append(id)
                 print(e)
         print(batch)
+        print(f"\nProcessed {len(td)} items")
 
 
 
@@ -127,11 +158,11 @@ if __name__ == "__main__":
 
     #加载不同模型
     if args.modeltype=="qwen":
-        model = qwenmod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model = qwenmod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="gemma" or args.modeltype=="google":
-        model=googlemod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model=googlemod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="llama":
-        model=llamamod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
+        model=llamamod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="intern":
         model=internmod(args.modelpath)
 
