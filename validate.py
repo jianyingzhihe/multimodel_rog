@@ -1,9 +1,19 @@
+import os
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+# os.environ["VLLM_LOGGING_LEVEL"]="DEBUG"
+# os.environ["NCCL_DEBUG"]="TRACE"
+# os.environ["VLLM_TRACE_FUNCTION"]="1"
+os.environ["NCCL_P2P_DISABLE"] = "1"
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+
 import json
 import argparse
 import tqdm
-import os
+
 from distutils.util import strtobool
-os.environ["TORCHDYNAMO_DISABLE"] = "1"
+
 from src.fileloader import dataf, qwenmod, datap, datas, googlemod, llamamod, internmod
 
 
