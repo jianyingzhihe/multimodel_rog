@@ -2,7 +2,6 @@ import math
 import numpy as np
 import torch
 import torchvision.transforms as T
-from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 from modelscope import AutoModel, AutoTokenizer,AutoConfig
@@ -125,5 +124,6 @@ class internmod():
     def infer(self, image,question):
         pixel_values = load_image(image, max_num=12).to(torch.bfloat16).cuda()
         generation_config = dict(max_new_tokens=1024, do_sample=True)
-        result = self.model.caht(self.tokenizer, pixel_values, question, generation_config)
+        result = self.model.chat(self.tokenizer, pixel_values, question, generation_config)
+        return result
 
