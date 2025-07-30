@@ -44,7 +44,7 @@ class llamamod(BaseMultiModalModel):
                 "max_num_seqs": 2
             }
             if use_auth_token:
-                vllm_kwargs["use_auth_token"] = use_auth_token
+                vllm_kwargs["hf_token"] = use_auth_token
             
             self.model = LLM(**vllm_kwargs)
             
