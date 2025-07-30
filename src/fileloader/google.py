@@ -35,8 +35,9 @@ class googlemod(BaseMultiModalModel):
                              tensor_parallel_size=num_gpus,
                              enable_prefix_caching=True,
                              gpu_memory_utilization=0.9,
-                             limit_mm_per_prompt={"image": 1},
-                              max_model_len=4096,
+                             allowed_local_media_path=allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
+                             limit_mm_per_prompt={"image": 1,"video": 0},
+                             max_model_len=4096,
                              max_num_seqs=2)
 
     def inf_question_image(self, question: str, image: str):
