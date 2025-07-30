@@ -14,6 +14,7 @@ from vllm.sampling_params import BeamSearchParams
 class googlemod(BaseMultiModalModel):
     def _load_model(self,type="hf",max_tokens=512):
         self.type=type
+        self.modeltype="gemma"
         if type=="hf":
             print(os.getcwd())
             print(self.modelpath)

@@ -3,7 +3,7 @@ import json
 import tqdm
 import os
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
-from src.fileloader import dataf, qwenmod,datap,datas
+from src.fileloader import dataf, qwenmod,datap,datas,googlemod,llamamode,internmod
 
 
 def generate(model, dataset, outputdir):
@@ -38,7 +38,11 @@ def generate(model, dataset, outputdir):
                         {"role": "user",
                          "content": [{"type": "image","image":image}, {"type": "text", "text": {question}}]}
                     ]
-                result = model.inf_with_messages(messages)
+                if model.modeltype == "intern":
+                    messages="[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\""+question+"\"}]}]"
+                    result=model.infer(messages,image)
+                else :
+                    result = model.inf_with_messages(messages)
                 output_dict = {
                             "id": id,
                             "question": question,
@@ -54,8 +58,9 @@ def generate(model, dataset, outputdir):
 
 
 
-# 示例调用
+
 if __name__ == "__main__":
+    #加载不同数据集
     dataset_type="fvqa"
     if dataset_type=="fvqa":
         qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
@@ -65,8 +70,20 @@ if __name__ == "__main__":
         ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
     if dataset_type=="okvqa":
         ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA/")
+
+    #加载不同模型
+    modeltype="intern"
     modelpath = "./multimodels/Qwen/qwenvl"
+    if modeltype=="qwen":
+        model = qwenmod(modelpath, type="hf")
+    elif modeltype=="gemma" or "google":
+        model=googlemod(modelpath)
+    elif modeltype=="llama":
+        model=llamamode(modelpath)
+    elif modeltype=="intern":
+        model=internmod(modelpath)
+
     outputdir = "./output_with_system_token_qwen_AOKVQA.jsonl"  # 指定输出目录
-    model = qwenmod(modelpath,type="hf")
+
     generate(model=model, dataset=ds, outputdir=outputdir)
     # ds.evaluate_jsonl(outputdir)

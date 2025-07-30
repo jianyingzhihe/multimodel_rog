@@ -21,7 +21,7 @@ class qapair():
 
 
 
-def format_image_name(image_id,type="val"):
+def format_image_name(image_id,split="val"):
     """
     根据提供的image_id生成对应的COCO图片名。
 
@@ -36,29 +36,31 @@ def format_image_name(image_id,type="val"):
     print(formatted_name)  # 输出: test.jpg
     """
     # print(f"COCO_{type}2014_{image_id:012d}.jpg")
-    return f"COCO_{type}2014_{image_id:012d}.jpg"
+    return f"COCO_{split}2014_{image_id:012d}.jpg"
 
 class datas():
-    def __init__(self,datapath,type="val"):
+    def __init__(self,datapath,split="val"):
+        self.datatype="okvqa"
+        self.split=split
         print("initialing the datas")
-        qp=os.path.join(datapath,f"{type}_questions.json")
-        ap=os.path.join(datapath,f"{type}.json")
-        ip=os.path.join(datapath,f"{type}2014")
-        self.question,self.image,self.answer=self.load_json(qp,ap,ip,type)
-        self.processdatas(type=type)
+        qp=os.path.join(datapath,f"{split}_questions.json")
+        ap=os.path.join(datapath,f"{split}.json")
+        ip=os.path.join(datapath,f"{split}2014")
+        self.image_path=ip
+        self.question,self.answer=self.load_json(qp,ap,ip,split)
+        self.processdatas(split=split)
         print("finish loading datas")
 
-    def load_json(self,question_path, answer_path, image_path,type="val"):
+    def load_json(self,question_path, answer_path, image_path,split="val"):
         with open(question_path) as f:
             data = json.load(f)
             question = data["questions"]
-            image = [os.listdir(image_path), image_path]
             with open(answer_path) as an:
                 data = json.load(an)
                 answer = data["annotations"]
-            return question, image, answer
+            return question, answer
 
-    def processdatas(self,type="val"):
+    def processdatas(self,split="val"):
         """
         combined每一个数据的数据结构
         {'id': 297147,
@@ -67,22 +69,36 @@ class datas():
         'answer': [{'answer_id': 1, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 2, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 3, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 4, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 5, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 6, 'raw_answer': 'racing', 'answer_confidence': 'yes', 'answer': 'race'}, {'answer_id': 7, 'raw_answer': 'motocross', 'answer_confidence': 'yes', 'answer': 'motocross'}, {'answer_id': 8, 'raw_answer': 'motocross', 'answer_confidence': 'yes', 'answer': 'motocross'}, {'answer_id': 9, 'raw_answer': 'riding', 'answer_confidence': 'yes', 'answer': 'ride'}, {'answer_id': 10, 'raw_answer': 'riding', 'answer_confidence': 'yes', 'answer': 'ride'}]}
         """
         self.combined=[]
+        i=0
         for each in self.question:
-            temp=qapair(each["question"],each["answer"],each["image_path"],each["id"])
-            self.combined.append(temp)
+            id=each["question_id"]
+            for ans in self.answer:
+                if ans["question_id"]==id:
+                    temp=qapair(each["question"],ans["answers"],os.path.join(self.image_path,format_image_name(each["image_id"],split=self.split)),each["question_id"])
+                    self.combined.append(temp)
+                    break
+        print(self.combined[0].id,self.combined[0].question,self.combined[0].answer,self.combined[0].image)
 
-    def getanswer(self,image_id):
+
+    def getanswer(self,id):
         for each in self.answer:
-            if each["image_id"] == image_id:
+            if each.id == id:
                 return each["answers"]
-        warnings.warn("didn't find answer whitch match the id")
+        warnings.warn("didn't find answer which match the id")
         return None
 
     def getquestion(self,id):
         for each in self.combined:
             if each.id == id:
                 return each.question
-        warnings.warn("didn't find question whitch match the id")
+        warnings.warn("didn't find question which match the id")
+        return None
+
+    def getimage(self,id):
+        for each in self.combined:
+            if each.id == id:
+                return each.image
+        warnings.warn("didn't find image which match the id")
         return None
 
     def evaluate_jsonl(self, jsonl_path):
@@ -122,12 +138,12 @@ class datas():
 
 
 
-def format(image_id, type="val"):
-        return f"abstract_v002_{type}2015_{image_id:012d}.png"
+def format(image_id, split="val"):
+        return f"abstract_v002_{split}2015_{image_id:012d}.png"
 
 
 class datap():
-    def __init__(self,datapath,typeof="val"):
+    def __init__(self,datapath,split="val"):
         print("initializing data")
         ds=pandas.read_parquet(datapath)
         self.lenth=len(ds)
@@ -198,10 +214,10 @@ class datap():
         return correct_count, total_count, accuracy
 
 class datav():#给vqa用
-    def __init__(self, datapath, typeof="val"):
-        self.ans_path = f"abstract_v002_{typeof}2017_annotations.json"
-        self.que_path = f"OpenEnded_abstract_v002_{typeof}2017_questions.json"
-        self.image_path = os.path.join(datapath,f"scene_img_abstract_v002_{typeof}2017")
+    def __init__(self, datapath, split="val"):
+        self.ans_path = f"abstract_v002_{split}2017_annotations.json"
+        self.que_path = f"OpenEnded_abstract_v002_{split}2017_questions.json"
+        self.image_path = os.path.join(datapath,f"scene_img_abstract_v002_{split}2017")
         inputanswer = os.path.join(datapath, self.ans_path)
         inputquestion = os.path.join(datapath, self.que_path)
         self.combined = []
@@ -231,7 +247,7 @@ class datav():#给vqa用
 
 
 class dataf():
-    def __init__(self, qapath,imagepath, typeof="val"):
+    def __init__(self, qapath,imagepath, splitof="val"):
         with open(qapath, "r") as f1:
             self.combined = []
             data = json.load(f1)
@@ -308,9 +324,11 @@ class dataf():
 
 
 if __name__ == "__main__":
-    pass
     # qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
     # image="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/images"
     # ds=dataf(qapath,image)
+    # for each in ds.train:
+    #     print(each.id)
     # ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
     # ds.createimg()
+    ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA")

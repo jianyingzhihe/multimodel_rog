@@ -11,6 +11,7 @@ from .multi import BaseMultiModalModel
 
 class qwenmod(BaseMultiModalModel):
     def _load_model(self,type="hf"):
+        self.modeltype="qwen"
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             self.modelpath,
             torch_dtype=torch.bfloat16,

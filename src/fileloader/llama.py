@@ -13,6 +13,7 @@ from vllm.sampling_params import BeamSearchParams
 
 class llamamod(BaseMultiModalModel):
     def _load_model(self,type="hf",max_tokens=512):
+        self.modeltype="llama"
         self.type=type
         if type=="hf":
             print(os.getcwd())
