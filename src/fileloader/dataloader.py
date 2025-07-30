@@ -20,7 +20,6 @@ class qapair():
         self.choice=choice
 
 
-
 def format_image_name(image_id,split="val"):
     """
     根据提供的image_id生成对应的COCO图片名。
@@ -272,14 +271,14 @@ class dataf():
                 self.val.append(self.combined[i])
 
     def getquestion(self,id):
-        for each in self.combined:
+        for each in self.val:
             if each.id == id:
                 return each.question
             else:
                 return None
 
     def getanswer(self,image_id):
-        for each in self.combined:
+        for each in self.val:
             if each.id == image_id:
                 return each.answer
         warnings.warn("didn't find answer whitch match the id")
