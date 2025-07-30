@@ -25,10 +25,14 @@ class llamamod(BaseMultiModalModel):
             )
             self.processor = AutoProcessor.from_pretrained(self.modelpath)
         if type=="vllm":
+            num_gpus = torch.cuda.device_count()
             self.sampling_params = SamplingParams(
                 max_tokens=max_tokens,  # 修改这里：增加最大输出 token 数量
             )
             self.model = LLM(model=self.modelpath,
+                             tensor_parallel_size=num_gpus,
+                             enable_prefix_caching=True,
+                             gpu_memory_utilization=0.9,
                              allowed_local_media_path="/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
                              limit_mm_per_prompt={"image": 1,"video": 0},
                              max_model_len=9000,
