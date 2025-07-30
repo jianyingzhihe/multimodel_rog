@@ -21,6 +21,7 @@ class llamamod(BaseMultiModalModel):
             self.model = MllamaForConditionalGeneration.from_pretrained(
                 pretrained_model_name_or_path=self.modelpath,
                 torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
                 device_map="auto"
             )
             self.processor = AutoProcessor.from_pretrained(self.modelpath)
