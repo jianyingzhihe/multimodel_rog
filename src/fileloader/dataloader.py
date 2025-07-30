@@ -43,9 +43,9 @@ class datas():
         self.datatype="okvqa"
         self.split=split
         print("initialing the datas")
-        qp=os.path.join(datapath,f"{split}_questions.json")
-        ap=os.path.join(datapath,f"{split}.json")
-        ip=os.path.join(datapath,f"{split}2014")
+        qp=os.path.join(datapath,f"OpenEnded_mscoco_{type}2014_questions.json")
+        ap=os.path.join(datapath,f"mscoco_{type}2014_annotations.json")
+        ip=os.path.join(datapath,f"{type}2014")
         self.image_path=ip
         self.question,self.answer=self.load_json(qp,ap,ip,split)
         self.processdatas(split=split)
