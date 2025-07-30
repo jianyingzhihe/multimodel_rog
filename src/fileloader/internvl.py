@@ -114,9 +114,9 @@ class internmod():
         self.model = AutoModel.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
             load_in_8bit=False,
             low_cpu_mem_usage=True,
-            use_flash_attn=True,
             trust_remote_code=True,
             device_map=self.device_map).eval()
         self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True, use_fast=False)
