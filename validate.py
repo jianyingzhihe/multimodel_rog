@@ -113,22 +113,25 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     #加载不同数据集
+    image_path = None
     if args.dataset_type=="fvqa":
         qapath="/home/z_wen/Kbvqa/data/FVQA/new_dataset_release/all_qs_dict_release.json"
-        image="/home/z_wen/Kbvqa/data/FVQA/new_dataset_release/images"
-        ds=dataf(qapath,image)
+        image_path="/home/z_wen/Kbvqa/data/FVQA/new_dataset_release/images"
+        ds=dataf(qapath,image_path)
     if args.dataset_type=="aokvqa":
+        image_path="/root/autodl-tmp/RoG/qwen/data/AOKVQA/val2014"  # AOKVQA 图像路径
         ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
     if args.dataset_type=="okvqa":
+        image_path="/home/z_wen/Kbvqa/data/okvqa_data/val/val2014"  # OKVQA 图像路径
         ds=datas("/home/z_wen/Kbvqa/data/okvqa_data/val/")
 
     #加载不同模型
     if args.modeltype=="qwen":
-        model = qwenmod(args.modelpath, type=args.infer_type)
+        model = qwenmod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="gemma" or args.modeltype=="google":
-        model=googlemod(args.modelpath, type=args.infer_type)
+        model=googlemod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="llama":
-        model=llamamod(args.modelpath, type=args.infer_type)
+        model=llamamod(args.modelpath, type=args.infer_type, allowed_local_media_path=image_path)
     elif args.modeltype=="intern":
         model=internmod(args.modelpath)
 
