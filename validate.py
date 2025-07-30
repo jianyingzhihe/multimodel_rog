@@ -17,7 +17,7 @@ from distutils.util import strtobool
 from src.fileloader import dataf, qwenmod, datap, datas, googlemod, llamamod, internmod
 
 
-def generate(model, dataset, outputdir, use_system=True):
+def generate(model, dataset, outputdir, use_system=True, dataset_type=None):
     """
     使用给定的模型对数据集中的每个条目进行推理，并将结果保存为jsonl格式的文件。
     :param model: 已加载的模型实例。
@@ -45,7 +45,13 @@ def generate(model, dataset, outputdir, use_system=True):
         print("Output file does not exist, starting from scratch")
     with open(output_path, 'a', encoding='utf-8') as f:
         batch=[]
-        for each in tqdm.tqdm(dataset.combined, desc="Processing images"):
+        # 根据数据集类型选择正确的数据属性
+        if dataset_type == "fvqa":
+            data_source = dataset.val
+        else:
+            data_source = dataset.combined
+            
+        for each in tqdm.tqdm(data_source, desc="Processing images"):
             id = each.id
             if id in td:
                 continue
@@ -166,5 +172,5 @@ if __name__ == "__main__":
     elif args.modeltype=="intern":
         model=internmod(args.modelpath)
 
-    generate(model=model, dataset=ds, outputdir=args.outputdir, use_system=args.system)
+    generate(model=model, dataset=ds, outputdir=args.outputdir, use_system=args.system, dataset_type=args.dataset_type)
     # ds.evaluate_jsonl(args.outputdir)
