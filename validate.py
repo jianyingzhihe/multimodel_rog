@@ -104,14 +104,7 @@ def generate(model, dataset, outputdir, use_system=True, dataset_type=None):
                              "content": [{"type": "image","image":image}, {"type": "text", "text": question}]}
                         ]
 
-                if model.modeltype == "intern":
-                    if use_system:
-                        messages="[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"You are a visual reasoning assistant. Please first identify the objects and their attributes in the image, then construct a reasonable relationship path based on the question, and finally provide the answer in English.\"}]},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\""+question+"\"}]}]"
-                    else:
-                        messages="[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\""+question+"\"}]}]"
-                    result=model.infer(messages,image)
-                else :
-                    result = model.inf_with_messages(messages)
+                result = model.inf_with_messages(messages)
                 output_dict = {
                             "id": id,
                             "question": question,
@@ -172,7 +165,7 @@ if __name__ == "__main__":
     elif args.modeltype=="llama":
         model=llamamod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
     elif args.modeltype=="intern":
-        model=internmod(args.modelpath)
+        model=internmod(modelpath=args.modelpath, type=args.infer_type, use_auth_token=args.auth_token)
 
     generate(model=model, dataset=ds, outputdir=args.outputdir, use_system=args.system, dataset_type=args.dataset_type)
     # ds.evaluate_jsonl(args.outputdir)
