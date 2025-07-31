@@ -62,7 +62,7 @@ def solve_vllm(daset, llm,lora_req):
     fw = open(output_file, 'w', encoding='utf-8')
     for each in tqdm.tqdm(daset.combined):
         # 构造请求
-        image_path = each["image_path"]
+        image_path = each.image
         image_path = os.path.join("/root/autodl-tmp/RoG/qwen", image_path)
         image_file_url = "file:///" + image_path
         print(image_file_url)
@@ -70,7 +70,7 @@ def solve_vllm(daset, llm,lora_req):
                 {"role": "system",
                  "content": "你是视觉推理助手。请先识别图像中的对象及其属性，然后根据问题构建合理的关系路径，最后给出答案。"},
                 {"role": "user",
-                 "content": [{"type": "image_url", "image_url": {"url":image_file_url}}, {"type": "text", "text": each["question"]}]}
+                 "content": [{"type": "image_url", "image_url": {"url":image_file_url}}, {"type": "text", "text": each.question}]}
             ],
 
         outputs = llm.chat(messages, lora_request=lora_req)
@@ -78,9 +78,9 @@ def solve_vllm(daset, llm,lora_req):
         print(res)
         # 构建输出字典
         result = {
-            "id": each["id"],
-            "question": each["question"],
-            "image_path": each["image_path"],
+            "id": each.id,
+            "question": each.question,
+            "image_path": each.image,
             "predicted_answer": res,
             # 如果你有 ground truth 答案也可以加上
             # "ground_truth": each.get("answer", "")
