@@ -107,23 +107,74 @@ def split_model(model_path):
     return device_map
 
 
-class internmod():
-    def __init__(self, model_path):
-        self.device_map = split_model(model_path)
+from .multi import BaseMultiModalModel
+
+class internmod(BaseMultiModalModel):
+    def _load_model(self, type="hf", **kwargs):
+        self.modeltype = "intern"
+        self.type = type
+        self.device_map = split_model(self.modelpath)
         self.model = AutoModel.from_pretrained(
-            model_path,
+            self.modelpath,
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
             load_in_8bit=False,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
             device_map=self.device_map).eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True, use_fast=False)
-        self.modeltype="intern"
+        self.tokenizer = AutoTokenizer.from_pretrained(self.modelpath, trust_remote_code=True, use_fast=False)
 
-    def infer(self, image,question):
+    def infer(self, image, question):
         pixel_values = load_image(image, max_num=12).to(torch.bfloat16).cuda()
         generation_config = dict(max_new_tokens=1024, do_sample=True)
-        result = self.model.chat(self.tokenizer, pixel_values, question, generation_config)
+        # 为图像问题添加 <image> 标记
+        question_with_image = f'<image>\n{question}'
+        result = self.model.chat(self.tokenizer, pixel_values, question_with_image, generation_config)
         return result
+    
+    def inf_question_image(self, question: str, image: str):
+        """基础推理接口：输入问题和图像路径，返回文本答案"""
+        return self.infer(image, question)
+    
+    def inf_with_messages(self, messages: list):
+        """支持对话历史的消息格式推理接口"""
+        # 从消息中提取问题和图像
+        question = ""
+        image = None
+        system_prompt = ""
+        
+        for message in messages:
+            if message.get("role") == "system":
+                # 处理 system prompt
+                content = message.get("content", "")
+                if isinstance(content, str):
+                    system_prompt = content
+                elif isinstance(content, list):
+                    for item in content:
+                        if item.get("type") == "text":
+                            system_prompt = item.get("text", "")
+            elif message.get("role") == "user":
+                content = message.get("content", [])
+                if isinstance(content, list):
+                    for item in content:
+                        if item.get("type") == "text":
+                            question = item.get("text", "")
+                        elif item.get("type") == "image":
+                            image = item.get("image")
+                        elif item.get("type") == "image_url":
+                            image_url = item.get("image_url", {})
+                            url = image_url.get("url", "")
+                            if url.startswith("file:///"):
+                                image = url[8:]  # 移除 "file:///" 前缀
+                            else:
+                                image = url
+        
+        # 如果有 system prompt，将其添加到问题前面
+        if system_prompt:
+            question = f"{system_prompt}\n\n{question}"
+        
+        if image and question:
+            return self.infer(image, question)
+        else:
+            raise ValueError(f"Could not extract image and question from messages. Image: {image}, Question: {question}")
 
