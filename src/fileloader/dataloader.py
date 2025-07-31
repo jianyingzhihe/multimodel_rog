@@ -5,7 +5,6 @@ import re
 import time
 import pandas
 import tqdm
-from modelscope.msdatasets import MsDataset
 from PIL import Image
 import io
 
