@@ -69,7 +69,6 @@ def generate_with_gemini(client, dataset, output_path, max_workers=32):
 
     print(f"✅ Results saved to {output_path}")
 
-
 # 主程序入口
 if __name__ == "__main__":
     qapath="/root/autodl-tmp/RoG/qwen/data/FVQA/new_dataset_release/all_qs_dict_release.json"
