@@ -165,7 +165,7 @@ if __name__ == "__main__":
     elif args.modeltype=="llama":
         model=llamamod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
     elif args.modeltype=="intern":
-        model=internmod(modelpath=args.modelpath, type=args.infer_type, use_auth_token=args.auth_token)
+        model=internmod(modelpath=args.modelpath, type=args.infer_type, allowed_local_media_path=image_path, use_auth_token=args.auth_token)
 
     generate(model=model, dataset=ds, outputdir=args.outputdir, use_system=args.system, dataset_type=args.dataset_type)
     # ds.evaluate_jsonl(args.outputdir)
