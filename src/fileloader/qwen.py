@@ -2,9 +2,8 @@
 import os
 import torch
 from PIL import Image
-from transformers import AutoProcessor
+from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
-from modelscope import Qwen2_5_VLForConditionalGeneration
 from .dataloader import *
 from .multi import BaseMultiModalModel
 from vllm import LLM,SamplingParams
