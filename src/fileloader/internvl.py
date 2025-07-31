@@ -2,10 +2,10 @@ import math
 import numpy as np
 import torch
 import torchvision.transforms as T
-from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
-from modelscope import AutoModel, AutoTokenizer,AutoConfig
+from transformers import AutoModel, AutoTokenizer, AutoConfig
+from vllm import LLM, SamplingParams, EngineArgs
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -108,22 +108,173 @@ def split_model(model_path):
     return device_map
 
 
-class internmod():
-    def __init__(self, model_path):
-        self.device_map = split_model(model_path)
-        self.model = AutoModel.from_pretrained(
-            model_path,
-            torch_dtype=torch.bfloat16,
-            load_in_8bit=False,
-            low_cpu_mem_usage=True,
-            use_flash_attn=True,
-            trust_remote_code=True,
-            device_map=self.device_map).eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True, use_fast=False)
-        self.modeltype="intern"
+from .multi import BaseMultiModalModel
 
-    def infer(self, image,question):
-        pixel_values = load_image(image, max_num=12).to(torch.bfloat16).cuda()
-        generation_config = dict(max_new_tokens=1024, do_sample=True)
-        result = self.model.caht(self.tokenizer, pixel_values, question, generation_config)
+class internmod(BaseMultiModalModel):
+    def _load_model(self, type="hf", max_tokens=512, allowed_local_media_path=None, use_auth_token=None, **kwargs):
+        self.modeltype = "intern"
+        self.type = type
+        
+        if type == "hf":
+            self.device_map = split_model(self.modelpath)
+            self.model = AutoModel.from_pretrained(
+                self.modelpath,
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+                load_in_8bit=False,
+                low_cpu_mem_usage=True,
+                trust_remote_code=True,
+                device_map=self.device_map).eval()
+            self.tokenizer = AutoTokenizer.from_pretrained(self.modelpath, trust_remote_code=True, use_fast=False)
+        
+        elif type == "vllm":
+            # 如果提供了 auth token，设置环境变量
+            if use_auth_token:
+                import os
+                os.environ["HF_TOKEN"] = use_auth_token
+            
+            # VLLM 配置
+            vllm_kwargs = {
+                "model": self.modelpath,
+                "trust_remote_code": True,
+                "max_model_len": 4096,
+                "limit_mm_per_prompt": {"image": 1, "video": 0},
+                "tensor_parallel_size": torch.cuda.device_count(),
+                "gpu_memory_utilization": 0.9,
+            }
+            
+            if allowed_local_media_path:
+                vllm_kwargs["allowed_local_media_path"] = allowed_local_media_path
+            if use_auth_token:
+                vllm_kwargs["hf_token"] = use_auth_token
+                
+            self.model = LLM(**vllm_kwargs)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.modelpath, trust_remote_code=True)
+            
+            # 设置采样参数
+            self.sampling_params = SamplingParams(
+                max_tokens=max_tokens
+            )
+            
+            # 设置停止词
+            stop_tokens = ["<|endoftext|>", "<|im_start|>", "<|im_end|>", "<|end|>"]
+            stop_token_ids = [self.tokenizer.convert_tokens_to_ids(token) for token in stop_tokens]
+            stop_token_ids = [token_id for token_id in stop_token_ids if token_id is not None]
+            self.sampling_params.stop_token_ids = stop_token_ids
+
+    def infer(self, image, question):
+        if self.type == "hf":
+            pixel_values = load_image(image, max_num=12).to(torch.bfloat16).cuda()
+            generation_config = dict(max_new_tokens=1024, do_sample=True)
+            # 为图像问题添加 <image> 标记
+            question_with_image = f'<image>\n{question}'
+            result = self.model.chat(self.tokenizer, pixel_values, question_with_image, generation_config)
+            return result
+        
+        elif self.type == "vllm":
+            # 为图像问题添加 <image> 标记
+            question_with_image = f'<image>\n{question}'
+            
+            # 构造消息格式，包含图像信息
+            messages = [{
+                "role": "user", 
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"file:///{image}"}},
+                    {"type": "text", "text": question}
+                ]
+            }]
+            
+            # 使用 tokenizer 的 chat template
+            prompt = self.tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            
+            # VLLM 推理 - 使用 chat 方法而不是 generate
+            outputs = self.model.chat(messages, self.sampling_params)
+            result = outputs[0].outputs[0].text
+            return result
+    
+    def inf_question_image(self, question: str, image: str):
+        """基础推理接口：输入问题和图像路径，返回文本答案"""
+        return self.infer(image, question)
+    
+    def inf_with_messages(self, messages: list):
+        """支持对话历史的消息格式推理接口"""
+        if self.type == "vllm":
+            # 对于 VLLM，直接使用原始消息格式，VLLM 会处理图像
+            # 但需要确保图像 URL 格式正确
+            processed_messages = []
+            
+            for message in messages:
+                if message.get("role") == "system":
+                    # 保持 system message 不变
+                    processed_messages.append(message)
+                elif message.get("role") == "user":
+                    content = message.get("content", [])
+                    if isinstance(content, list):
+                        processed_content = []
+                        
+                        for item in content:
+                            if item.get("type") == "text":
+                                processed_content.append(item)
+                            elif item.get("type") == "image":
+                                # 转换为 image_url 格式
+                                image_path = item.get("image")
+                                processed_content.append({
+                                    "type": "image_url",
+                                    "image_url": {"url": f"file:///{image_path}"}
+                                })
+                            elif item.get("type") == "image_url":
+                                # 已经是正确格式，直接使用
+                                processed_content.append(item)
+                        
+                        processed_messages.append({
+                            "role": "user",
+                            "content": processed_content
+                        })
+            
+            # VLLM 推理 - 使用 chat 方法
+            outputs = self.model.chat(processed_messages, self.sampling_params)
+            return outputs[0].outputs[0].text
+        
+        else:
+            # 对于 HF 模式，使用原来的逻辑
+            question = ""
+            image = None
+            system_prompt = ""
+            
+            for message in messages:
+                if message.get("role") == "system":
+                    # 处理 system prompt
+                    content = message.get("content", "")
+                    if isinstance(content, str):
+                        system_prompt = content
+                    elif isinstance(content, list):
+                        for item in content:
+                            if item.get("type") == "text":
+                                system_prompt = item.get("text", "")
+                elif message.get("role") == "user":
+                    content = message.get("content", [])
+                    if isinstance(content, list):
+                        for item in content:
+                            if item.get("type") == "text":
+                                question = item.get("text", "")
+                            elif item.get("type") == "image":
+                                image = item.get("image")
+                            elif item.get("type") == "image_url":
+                                image_url = item.get("image_url", {})
+                                url = image_url.get("url", "")
+                                if url.startswith("file:///"):
+                                    image = url[8:]  # 移除 "file:///" 前缀
+                                else:
+                                    image = url
+            
+            # 如果有 system prompt，将其添加到问题前面
+            if system_prompt:
+                question = f"{system_prompt}\n\n{question}"
+            
+            if image and question:
+                return self.infer(image, question)
+            else:
+                raise ValueError(f"Could not extract image and question from messages. Image: {image}, Question: {question}")
 

@@ -3,16 +3,14 @@ import os
 import torch
 from PIL import Image
 from PIL.JpegImagePlugin import samplings
-from transformers import AutoProcessor
-from qwen_vl_utils import process_vision_info
-from modelscope import MllamaForConditionalGeneration,AutoProcessor
+from transformers import MllamaForConditionalGeneration,AutoProcessor
 from .dataloader import *
 from .multi import BaseMultiModalModel
 from vllm import LLM,SamplingParams
 from vllm.sampling_params import BeamSearchParams
 
 class llamamod(BaseMultiModalModel):
-    def _load_model(self,type="hf",max_tokens=512):
+    def _load_model(self,type="hf",max_tokens=512,allowed_local_media_path=None, use_auth_token=None, **kwargs):
         self.modeltype="llama"
         self.type=type
         if type=="hf":
@@ -21,19 +19,33 @@ class llamamod(BaseMultiModalModel):
             self.model = MllamaForConditionalGeneration.from_pretrained(
                 pretrained_model_name_or_path=self.modelpath,
                 torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
                 device_map="auto"
             )
             self.processor = AutoProcessor.from_pretrained(self.modelpath)
         if type=="vllm":
+            num_gpus = torch.cuda.device_count()
             self.sampling_params = SamplingParams(
                 max_tokens=max_tokens,  # 修改这里：增加最大输出 token 数量
             )
-            self.model = LLM(model=self.modelpath,
-                             allowed_local_media_path="/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
-                             limit_mm_per_prompt={"image": 1,"video": 0},
-                             max_model_len=9000,
-                             max_num_seqs=1)
-
+            vllm_kwargs = {
+                "model": self.modelpath,
+                "tensor_parallel_size": num_gpus,
+                "trust_remote_code": True,
+                "tokenizer_mode": "auto",
+                "dtype": torch.bfloat16,
+                "enable_prefix_caching": True,
+                "gpu_memory_utilization": 0.9,
+                "allowed_local_media_path": allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
+                "limit_mm_per_prompt": {"image": 1,"video": 0},
+                "max_model_len": 4096,
+                "max_num_seqs": 2
+            }
+            if use_auth_token:
+                vllm_kwargs["hf_token"] = use_auth_token
+            
+            self.model = LLM(**vllm_kwargs)
+            
     def inf_question_image(self, question: str, image: str):
         messages = [
             {

@@ -2,13 +2,13 @@
 from abc import ABC, abstractmethod
 
 class BaseMultiModalModel(ABC):
-    def __init__(self, modelpath: str = "./",type="hf"):
+    def __init__(self, modelpath: str = "./",type="hf", **kwargs):
         self.modelpath = modelpath
         self.type = type
-        self._load_model(type=self.type)
+        self._load_model(type=self.type, **kwargs)
 
     @abstractmethod
-    def _load_model(self,type="vllm"):
+    def _load_model(self,type="vllm", **kwargs):
         """加载模型和处理器"""
         pass
 

@@ -20,7 +20,6 @@ class qapair():
         self.choice=choice
 
 
-
 def format_image_name(image_id,split="val"):
     """
     根据提供的image_id生成对应的COCO图片名。
@@ -43,8 +42,8 @@ class datas():
         self.datatype="okvqa"
         self.split=split
         print("initialing the datas")
-        qp=os.path.join(datapath,f"{split}_questions.json")
-        ap=os.path.join(datapath,f"{split}.json")
+        qp=os.path.join(datapath,f"OpenEnded_mscoco_{split}2014_questions.json")
+        ap=os.path.join(datapath,f"mscoco_{split}2014_annotations.json")
         ip=os.path.join(datapath,f"{split}2014")
         self.image_path=ip
         self.question,self.answer=self.load_json(qp,ap,ip,split)
@@ -331,4 +330,4 @@ if __name__ == "__main__":
     #     print(each.id)
     # ds=datap("/root/autodl-tmp/RoG/qwen/data/AOKVQA/data/test-00000-of-00001-d306bf3ad53b6618.parquet")
     # ds.createimg()
-    ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA")
+    print("running this file") #ds=datas("/root/autodl-tmp/RoG/qwen/data/OKVQA")
