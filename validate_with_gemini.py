@@ -6,7 +6,7 @@ from .src.fileloader.dataloader import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from google.genai import types
 # 设置 API 密钥
-client = genai.Client(api_key="AIzaSyD7eWUthZIzI4d9rpl07kmRb9ExDVsXp8g")
+client = genai.Client(api_key="your_google_genai_api_key")
 
 # Gemini 图像 + 文本推理函数
 def gemini_vision_query(client, image_path, question):
