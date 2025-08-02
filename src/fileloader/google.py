@@ -28,11 +28,11 @@ class googlemod(BaseMultiModalModel):
             print(os.getcwd())
             print(self.modelpath)
             
-            # 优先使用更快的 attention 实现
+            # 优先使用 Flash Attention 2 以获得最快速度
             attention_methods = [
-                ("sdpa", "SDPA attention (fastest stable option)"),
-                ("flash_attention_2", "Flash Attention 2 (fastest but may have compatibility issues)"),
-                ("eager", "Eager attention (slowest but most stable)")
+                ("flash_attention_2", "Flash Attention 2 (fastest option)"),
+                ("sdpa", "SDPA attention (backup option)"),
+                ("eager", "Eager attention (fallback option)")
             ]
             
             model_loaded = False
@@ -50,6 +50,18 @@ class googlemod(BaseMultiModalModel):
                         "token": use_auth_token if use_auth_token else None,
                         "low_cpu_mem_usage": True,
                     }
+                    
+                    # Flash Attention 2 特殊配置
+                    if attn_type == "flash_attention_2":
+                        print("🔥 Configuring Flash Attention 2 optimizations...")
+                        # 设置环境变量以提高兼容性
+                        os.environ["FLASH_ATTENTION_SKIP_CUDA_CHECK"] = "1"
+            
+                        # 添加一些额外的参数来提高稳定性
+                        load_kwargs.update({
+                            "trust_remote_code": True,
+                            "use_safetensors": True,
+                        })
                     
                     self.model = Gemma3ForConditionalGeneration.from_pretrained(**load_kwargs)
                     print(f"✅ Successfully loaded with {attn_type}")
@@ -117,6 +129,16 @@ class googlemod(BaseMultiModalModel):
                     'pad_token_id': self.processor.tokenizer.eos_token_id,
                     'eos_token_id': self.processor.tokenizer.eos_token_id,
                 }
+                
+                # Flash Attention 2 特殊优化
+                if hasattr(self, 'attention_type') and self.attention_type == "flash_attention_2":
+                    print("🚀 Using Flash Attention 2 optimized generation...")
+                    generation_kwargs.update({
+                        'use_cache': False,  # Flash Attention 有时与 cache 不兼容
+                        'attention_mask': inputs.get('attention_mask', None),  # 显式传递 attention mask
+                    })
+                else:
+                    print(f"🔧 Using {getattr(self, 'attention_type', 'default')} attention...")
                 
                 generation = self.model.generate(
                     **inputs, 
