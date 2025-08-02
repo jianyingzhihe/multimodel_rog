@@ -132,13 +132,12 @@ class googlemod(BaseMultiModalModel):
                 
                 # Flash Attention 2 特殊优化
                 if hasattr(self, 'attention_type') and self.attention_type == "flash_attention_2":
-                    print("🚀 Using Flash Attention 2 optimized generation...")
+                    # print("🚀 Using Flash Attention 2 optimized generation...")
                     generation_kwargs.update({
                         'use_cache': False,  # Flash Attention 有时与 cache 不兼容
-                        'attention_mask': inputs.get('attention_mask', None),  # 显式传递 attention mask
                     })
-                else:
-                    print(f"🔧 Using {getattr(self, 'attention_type', 'default')} attention...")
+                # else:
+                #     print(f"🔧 Using {getattr(self, 'attention_type', 'default')} attention...")
                 
                 generation = self.model.generate(
                     **inputs, 
