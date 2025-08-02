@@ -9,16 +9,6 @@ os.environ["NCCL_P2P_DISABLE"] = "1"
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "0"  # Flash Attention performance optimization
 
-# 设置日志级别
-logging.getLogger("transformers").setLevel(logging.ERROR)
-logging.getLogger("torch").setLevel(logging.ERROR)
-
-# 过滤特定警告
-warnings.filterwarnings("ignore", message=".*generation flags.*")
-warnings.filterwarnings("ignore", message=".*top_p.*")
-warnings.filterwarnings("ignore", message=".*top_k.*")
-warnings.filterwarnings("ignore", message=".*use_fast.*")
-warnings.filterwarnings("ignore", message=".*cu_seqlens.*")
 
 import json
 import argparse
