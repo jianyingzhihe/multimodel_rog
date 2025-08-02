@@ -30,8 +30,8 @@ class googlemod(BaseMultiModalModel):
             
             # 优先使用更快的 attention 实现
             attention_methods = [
-                ("sdpa", "SDPA attention (fastest stable option)"),
                 ("flash_attention_2", "Flash Attention 2 (fastest but may have compatibility issues)"),
+                ("sdpa", "SDPA attention (fastest stable option)"),
                 ("eager", "Eager attention (slowest but most stable)")
             ]
             
