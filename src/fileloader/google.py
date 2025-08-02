@@ -3,7 +3,9 @@ import os
 import torch
 from PIL import Image
 from PIL.JpegImagePlugin import samplings
-from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+from transformers import AutoProcessor
+# from qwen_vl_utils import process_vision_info
+from modelscope import Gemma3ForConditionalGeneration
 from .dataloader import *
 from .multi import BaseMultiModalModel
 from vllm import LLM,SamplingParams
@@ -16,13 +18,42 @@ class googlemod(BaseMultiModalModel):
         if type=="hf":
             print(os.getcwd())
             print(self.modelpath)
-            self.model = Gemma3ForConditionalGeneration.from_pretrained(
-                pretrained_model_name_or_path=self.modelpath,
-                torch_dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
-                device_map="auto"
-            )
-            self.processor = AutoProcessor.from_pretrained(self.modelpath)
+            
+            # Try to load with flash attention 2 first, fallback to eager attention if it fails
+            try:
+                print("Attempting to load with flash_attention_2...")
+                self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                    pretrained_model_name_or_path=self.modelpath,
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
+                    device_map="auto",
+                    token=use_auth_token if use_auth_token else None
+                )
+                print("Successfully loaded with flash_attention_2")
+            except Exception as e:
+                print(f"Flash attention 2 failed: {e}")
+                print("Falling back to eager attention...")
+                try:
+                    self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                        pretrained_model_name_or_path=self.modelpath,
+                        torch_dtype=torch.bfloat16,
+                        attn_implementation="eager",
+                        device_map="auto",
+                        token=use_auth_token if use_auth_token else None
+                    )
+                    print("Successfully loaded with eager attention")
+                except Exception as e2:
+                    print(f"Eager attention also failed: {e2}")
+                    print("Trying default attention implementation...")
+                    self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                        pretrained_model_name_or_path=self.modelpath,
+                        torch_dtype=torch.bfloat16,
+                        device_map="auto",
+                        token=use_auth_token if use_auth_token else None
+                    )
+                    print("Successfully loaded with default attention")
+            
+            self.processor = AutoProcessor.from_pretrained(self.modelpath, token=use_auth_token if use_auth_token else None)
         if type=="vllm":
             num_gpus = torch.cuda.device_count()
             self.sampling_params = SamplingParams(
@@ -61,17 +92,28 @@ class googlemod(BaseMultiModalModel):
 
     def inf_with_messages(self, messages: list):
         if self.type=="hf":
-            inputs = self.processor.apply_chat_template(
-                messages, add_generation_prompt=True, tokenize=True,
-                return_dict=True, return_tensors="pt"
-            ).to(self.model.device, dtype=torch.bfloat16)
-            input_len = inputs["input_ids"].shape[-1]
-            with torch.inference_mode():
-                generation = self.model.generate(**inputs, max_new_tokens=512, do_sample=False)
-                print(generation)
-                generation = generation[0][input_len:]
-            decoded = self.processor.decode(generation, skip_special_tokens=True)
-            return decoded
+            try:
+                inputs = self.processor.apply_chat_template(
+                    messages, add_generation_prompt=True, tokenize=True,
+                    return_dict=True, return_tensors="pt"
+                ).to(self.model.device, dtype=torch.bfloat16)
+                input_len = inputs["input_ids"].shape[-1]
+                
+                with torch.inference_mode():
+                    # Use more conservative generation parameters to avoid errors
+                    generation = self.model.generate(
+                        **inputs, 
+                        max_new_tokens=512, 
+                        do_sample=False,
+                        pad_token_id=self.processor.tokenizer.eos_token_id,
+                        use_cache=True
+                    )
+                    generation = generation[0][input_len:]
+                decoded = self.processor.decode(generation, skip_special_tokens=True)
+                return decoded
+            except Exception as e:
+                print(f"Generation failed with error: {e}")
+                return f"Error during generation: {str(e)}"
         if self.type=="vllm":
             outputs = self.model.chat(messages, sampling_params=self.sampling_params)
             return outputs[0].outputs[0].text
