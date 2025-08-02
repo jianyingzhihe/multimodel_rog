@@ -28,42 +28,46 @@ class googlemod(BaseMultiModalModel):
             print(os.getcwd())
             print(self.modelpath)
             
-            # 直接使用 eager attention 以避免 flash attention 兼容性问题
-            print("Loading model with eager attention for stability...")
-            try:
-                self.model = Gemma3ForConditionalGeneration.from_pretrained(
-                    pretrained_model_name_or_path=self.modelpath,
-                    torch_dtype=torch.bfloat16,
-                    attn_implementation="eager",
-                    device_map="auto",
-                    token=use_auth_token if use_auth_token else None,
-                    low_cpu_mem_usage=True
-                )
-                print("✓ Successfully loaded with eager attention")
-            except Exception as e:
-                print(f"Eager attention failed: {e}")
-                print("Trying SDPA attention...")
+            # 优先使用更快的 attention 实现
+            attention_methods = [
+                ("sdpa", "SDPA attention (fastest stable option)"),
+                ("flash_attention_2", "Flash Attention 2 (fastest but may have compatibility issues)"),
+                ("eager", "Eager attention (slowest but most stable)")
+            ]
+            
+            model_loaded = False
+            for attn_type, description in attention_methods:
+                if model_loaded:
+                    break
+                    
+                print(f"Trying {description}...")
                 try:
-                    self.model = Gemma3ForConditionalGeneration.from_pretrained(
-                        pretrained_model_name_or_path=self.modelpath,
-                        torch_dtype=torch.bfloat16,
-                        attn_implementation="sdpa",
-                        device_map="auto",
-                        token=use_auth_token if use_auth_token else None,
-                        low_cpu_mem_usage=True
-                    )
-                    print("✓ Successfully loaded with SDPA attention")
-                except Exception as e2:
-                    print(f"SDPA attention also failed: {e2}")
-                    print("Trying default attention implementation...")
-                    self.model = Gemma3ForConditionalGeneration.from_pretrained(
-                        pretrained_model_name_or_path=self.modelpath,
-                        torch_dtype=torch.bfloat16,
-                        device_map="auto",
-                        token=use_auth_token if use_auth_token else None,
-                        low_cpu_mem_usage=True
-                    )
-                    print("✓ Successfully loaded with default attention")
+                    load_kwargs = {
+                        "pretrained_model_name_or_path": self.modelpath,
+                        "torch_dtype": torch.bfloat16,
+                        "attn_implementation": attn_type,
+                        "device_map": "auto",
+                        "token": use_auth_token if use_auth_token else None,
+                        "low_cpu_mem_usage": True,
+                    }
+                    
+                    # 为 flash attention 添加额外配置
+                    if attn_type == "flash_attention_2":
+                        # 设置环境变量以改善 flash attention 兼容性
+                        os.environ["FLASH_ATTENTION_FORCE_FP16"] = "1"
+                        load_kwargs["torch_dtype"] = torch.float16  # flash attention 更适合 fp16
+                    
+                    self.model = Gemma3ForConditionalGeneration.from_pretrained(**load_kwargs)
+                    print(f"✅ Successfully loaded with {attn_type}")
+                    model_loaded = True
+                    self.attention_type = attn_type
+                    
+                except Exception as e:
+                    print(f"❌ {attn_type} failed: {str(e)[:100]}...")
+                    continue
+            
+            if not model_loaded:
+                raise RuntimeError("Failed to load model with any attention implementation")
             
             self.processor = AutoProcessor.from_pretrained(self.modelpath, token=use_auth_token if use_auth_token else None)
         if type=="vllm":
@@ -112,7 +116,7 @@ class googlemod(BaseMultiModalModel):
                 input_len = inputs["input_ids"].shape[-1]
                 
                 with torch.inference_mode():
-                    # 使用保守的生成参数以避免错误，移除无效参数
+                    # 根据 attention 类型优化生成参数
                     generation_kwargs = {
                         'max_new_tokens': 512,
                         'do_sample': False,
@@ -121,6 +125,22 @@ class googlemod(BaseMultiModalModel):
                         'eos_token_id': self.processor.tokenizer.eos_token_id,
                     }
                     
+                    # 为不同 attention 类型添加特定优化
+                    if hasattr(self, 'attention_type'):
+                        if self.attention_type == "flash_attention_2":
+                            # Flash Attention 优化
+                            generation_kwargs.update({
+                                'use_cache': False,  # Flash attention 有时 cache 有问题
+                                'torch_dtype': torch.float16,
+                            })
+                        elif self.attention_type == "sdpa":
+                            # SDPA 优化
+                            generation_kwargs.update({
+                                'use_cache': True,
+                                'num_beams': 1,  # 避免复杂的beam search
+                            })
+                    
+                    print(f"Generating with {getattr(self, 'attention_type', 'unknown')} attention...")
                     generation = self.model.generate(
                         **inputs, 
                         **generation_kwargs
