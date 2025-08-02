@@ -51,12 +51,6 @@ class googlemod(BaseMultiModalModel):
                         "low_cpu_mem_usage": True,
                     }
                     
-                    # 为 flash attention 添加额外配置
-                    if attn_type == "flash_attention_2":
-                        # 设置环境变量以改善 flash attention 兼容性
-                        os.environ["FLASH_ATTENTION_FORCE_FP16"] = "1"
-                        load_kwargs["torch_dtype"] = torch.float16  # flash attention 更适合 fp16
-                    
                     self.model = Gemma3ForConditionalGeneration.from_pretrained(**load_kwargs)
                     print(f"✅ Successfully loaded with {attn_type}")
                     model_loaded = True
@@ -108,49 +102,30 @@ class googlemod(BaseMultiModalModel):
 
     def inf_with_messages(self, messages: list):
         if self.type=="hf":
-            try:
-                inputs = self.processor.apply_chat_template(
-                    messages, add_generation_prompt=True, tokenize=True,
-                    return_dict=True, return_tensors="pt"
-                ).to(self.model.device, dtype=torch.bfloat16)
-                input_len = inputs["input_ids"].shape[-1]
+            inputs = self.processor.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=True,
+                return_dict=True, return_tensors="pt"
+            ).to(self.model.device, dtype=torch.bfloat16)
+            input_len = inputs["input_ids"].shape[-1]
+            
+            with torch.inference_mode():
+                # 根据 attention 类型优化生成参数
+                generation_kwargs = {
+                    'max_new_tokens': 512,
+                    'do_sample': False,
+                    'use_cache': True,
+                    'pad_token_id': self.processor.tokenizer.eos_token_id,
+                    'eos_token_id': self.processor.tokenizer.eos_token_id,
+                }
                 
-                with torch.inference_mode():
-                    # 根据 attention 类型优化生成参数
-                    generation_kwargs = {
-                        'max_new_tokens': 512,
-                        'do_sample': False,
-                        'use_cache': True,
-                        'pad_token_id': self.processor.tokenizer.eos_token_id,
-                        'eos_token_id': self.processor.tokenizer.eos_token_id,
-                    }
-                    
-                    # 为不同 attention 类型添加特定优化
-                    if hasattr(self, 'attention_type'):
-                        if self.attention_type == "flash_attention_2":
-                            # Flash Attention 优化
-                            generation_kwargs.update({
-                                'use_cache': False,  # Flash attention 有时 cache 有问题
-                                'torch_dtype': torch.float16,
-                            })
-                        elif self.attention_type == "sdpa":
-                            # SDPA 优化
-                            generation_kwargs.update({
-                                'use_cache': True,
-                                'num_beams': 1,  # 避免复杂的beam search
-                            })
-                    
-                    print(f"Generating with {getattr(self, 'attention_type', 'unknown')} attention...")
-                    generation = self.model.generate(
-                        **inputs, 
-                        **generation_kwargs
-                    )
-                    generation = generation[0][input_len:]
-                decoded = self.processor.decode(generation, skip_special_tokens=True)
-                return decoded
-            except Exception as e:
-                print(f"Generation failed with error: {e}")
-                return f"Error during generation: {str(e)}"
+                generation = self.model.generate(
+                    **inputs, 
+                    **generation_kwargs
+                )
+                generation = generation[0][input_len:]
+            decoded = self.processor.decode(generation, skip_special_tokens=True)
+            return decoded
+
         if self.type=="vllm":
             outputs = self.model.chat(messages, sampling_params=self.sampling_params)
             return outputs[0].outputs[0].text
