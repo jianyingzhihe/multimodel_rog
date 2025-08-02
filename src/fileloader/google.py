@@ -1,6 +1,8 @@
 # multimodal/qwenmod.py
 import os
 import torch
+import warnings
+import logging
 from PIL import Image
 from PIL.JpegImagePlugin import samplings
 from transformers import Gemma3ForConditionalGeneration, AutoProcessor
@@ -8,6 +10,15 @@ from .dataloader import *
 from .multi import BaseMultiModalModel
 from vllm import LLM,SamplingParams
 from vllm.sampling_params import BeamSearchParams
+
+# 设置日志级别以减少警告信息
+logging.getLogger("transformers").setLevel(logging.ERROR)
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+
+# 忽略特定的警告
+warnings.filterwarnings("ignore", message=".*generation flags.*")
+warnings.filterwarnings("ignore", message=".*top_p.*")
+warnings.filterwarnings("ignore", message=".*top_k.*")
 
 class googlemod(BaseMultiModalModel):
     def _load_model(self,type="hf",max_tokens=512,allowed_local_media_path=None, use_auth_token=None, **kwargs):
@@ -17,39 +28,42 @@ class googlemod(BaseMultiModalModel):
             print(os.getcwd())
             print(self.modelpath)
             
-            # Try to load with flash attention 2 first, fallback to eager attention if it fails
+            # 直接使用 eager attention 以避免 flash attention 兼容性问题
+            print("Loading model with eager attention for stability...")
             try:
-                print("Attempting to load with flash_attention_2...")
                 self.model = Gemma3ForConditionalGeneration.from_pretrained(
                     pretrained_model_name_or_path=self.modelpath,
                     torch_dtype=torch.bfloat16,
-                    attn_implementation="flash_attention_2",
+                    attn_implementation="eager",
                     device_map="auto",
-                    token=use_auth_token if use_auth_token else None
+                    token=use_auth_token if use_auth_token else None,
+                    low_cpu_mem_usage=True
                 )
-                print("Successfully loaded with flash_attention_2")
+                print("✓ Successfully loaded with eager attention")
             except Exception as e:
-                print(f"Flash attention 2 failed: {e}")
-                print("Falling back to eager attention...")
+                print(f"Eager attention failed: {e}")
+                print("Trying SDPA attention...")
                 try:
                     self.model = Gemma3ForConditionalGeneration.from_pretrained(
                         pretrained_model_name_or_path=self.modelpath,
                         torch_dtype=torch.bfloat16,
-                        attn_implementation="eager",
+                        attn_implementation="sdpa",
                         device_map="auto",
-                        token=use_auth_token if use_auth_token else None
+                        token=use_auth_token if use_auth_token else None,
+                        low_cpu_mem_usage=True
                     )
-                    print("Successfully loaded with eager attention")
+                    print("✓ Successfully loaded with SDPA attention")
                 except Exception as e2:
-                    print(f"Eager attention also failed: {e2}")
+                    print(f"SDPA attention also failed: {e2}")
                     print("Trying default attention implementation...")
                     self.model = Gemma3ForConditionalGeneration.from_pretrained(
                         pretrained_model_name_or_path=self.modelpath,
                         torch_dtype=torch.bfloat16,
                         device_map="auto",
-                        token=use_auth_token if use_auth_token else None
+                        token=use_auth_token if use_auth_token else None,
+                        low_cpu_mem_usage=True
                     )
-                    print("Successfully loaded with default attention")
+                    print("✓ Successfully loaded with default attention")
             
             self.processor = AutoProcessor.from_pretrained(self.modelpath, token=use_auth_token if use_auth_token else None)
         if type=="vllm":
@@ -98,13 +112,18 @@ class googlemod(BaseMultiModalModel):
                 input_len = inputs["input_ids"].shape[-1]
                 
                 with torch.inference_mode():
-                    # Use more conservative generation parameters to avoid errors
+                    # 使用保守的生成参数以避免错误，移除无效参数
+                    generation_kwargs = {
+                        'max_new_tokens': 512,
+                        'do_sample': False,
+                        'use_cache': True,
+                        'pad_token_id': self.processor.tokenizer.eos_token_id,
+                        'eos_token_id': self.processor.tokenizer.eos_token_id,
+                    }
+                    
                     generation = self.model.generate(
                         **inputs, 
-                        max_new_tokens=512, 
-                        do_sample=False,
-                        pad_token_id=self.processor.tokenizer.eos_token_id,
-                        use_cache=True
+                        **generation_kwargs
                     )
                     generation = generation[0][input_len:]
                 decoded = self.processor.decode(generation, skip_special_tokens=True)
