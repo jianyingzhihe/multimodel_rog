@@ -79,7 +79,7 @@ class datas():
 
 
     def getanswer(self,id):
-        for each in self.answer:
+        for each in self.combined:
             if each.id == id:
                 return each["answers"]
         warnings.warn("didn't find answer which match the id")
@@ -133,12 +133,8 @@ class datas():
 
         return correct_count, total_count, accuracy
 
-
-
-
 def format(image_id, split="val"):
         return f"abstract_v002_{split}2015_{image_id:012d}.png"
-
 
 class datap():
     def __init__(self,datapath,split="val"):
@@ -293,7 +289,7 @@ class dataf():
                 id=data.get("id")
                 answers=self.getanswer(id)
 
-                predicted_answer = data.get('predicted_answer', '')
+                predicted_answer = data.get('answer', '')
                 if not isinstance(predicted_answer, str):
                     predicted_answer = str(predicted_answer)  # 确保是字符串
 
