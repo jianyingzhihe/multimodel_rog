@@ -92,7 +92,7 @@ class googlemod(BaseMultiModalModel):
                 "gpu_memory_utilization": 0.9,
                 "allowed_local_media_path": allowed_local_media_path or "/root/autodl-tmp/RoG/qwen/data/OKVQA/val2014",
                 "limit_mm_per_prompt": {"image": 1,"video": 0},
-                "max_model_len": 4096,
+                "max_model_len": 16384,
                 "max_num_seqs": 2
             }
             if use_auth_token:
