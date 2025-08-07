@@ -137,7 +137,7 @@ class internmod(BaseMultiModalModel):
             vllm_kwargs = {
                 "model": self.modelpath,
                 "trust_remote_code": True,
-                "max_model_len": 4096,
+                "max_model_len": 16384,
                 "limit_mm_per_prompt": {"image": 1, "video": 0},
                 "tensor_parallel_size": torch.cuda.device_count(),
                 "gpu_memory_utilization": 0.9,
