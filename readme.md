@@ -90,6 +90,8 @@ qwen在OKVQA上训练集训练出来的lora:正确数: 3724 / 总数: 5822， �
 
 qwen在OKVQA上用vrog方法3训练出来的lora：4779 / 总数: 5822, 准确率: 82.09%
 
+qwen,yes prompt: 869 /  1164, 准确率: 74.66%
+
 qwen,vrog方法： 929 /  1165, 准确率: 79.74%
 
 qwen vrog2： 883 /  1165,准确率: 75.79%
@@ -99,6 +101,8 @@ qwen以4:1（train:val=4658:1164）以vrog方法3训练出来的lora:964 / 总�
 qwen以4:1（train:val=4658:1164）直接训练出来的lora:861/1165,73.91%
 
 ### gemma
+gemma,no prompt: 823 /  1165, 准确率: 70.64%
+
 gemma，vrog方法： 805 /  1165, 准确率: 69.10%
 
 gemma vrog2, 868 /  1165,准确率: 74.51%
