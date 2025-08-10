@@ -108,6 +108,8 @@ qwen以4:1（train:val=4658:1164）直接训练出来的lora:861/1165,73.91%
 
 gemma,no prompt: 823 /  1165, 准确率: 70.64%
 
+gemma3-12b, yes prompt, , 正确数: 1736 / 总数: 2330, 准确率: 74.51%
+
 gemma,rog 928 /  1165, 准确率: 79.66%
 
 gemma，vrog方法： 805 /  1165, 准确率: 69.10%
@@ -119,6 +121,13 @@ gemma以4:1（train:val=4658:1164）以vrog方法3训练出来的lora: 947 /  11
 gemma以4:1（train:val=4658:1164）直接训练出来的lora:859/1165,73.73%
 
 ### llama
+
+fvqa, yes prompt, llama-11b,正确数: 737 / 总数: 1118, 准确率: 65.92%
+
+fvqa, no prompt, llama-11b
+✅ 正确数: 770 / 总数: 1165
+🎯 准确率: 66.09%
+
 llama,vrog方法： 840 /  1165, 准确率: 72.10%
 
 llama ,rog, 932 /  1165, 准确率: 80.00%
