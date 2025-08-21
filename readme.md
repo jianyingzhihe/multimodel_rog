@@ -177,7 +177,7 @@ qwen在OKVQA上用vrog方法3训练出来的lora:正确数: 1046 / 总数: 1145,
 |gemma|okvqa|fvqa| 678 /  1165, 准确率: 58.20% |
 |gemma|fvqa|okvqa| 3225 /5046，准确率: 63.91%    |
 |llama|okvqa|fvqa|  680 /  1165, 准确率: 58.37% |
-|llama|fvqa|okvqa| 3239 /5046，准确率: 64.19%    |
+|llama|fvqa|okvqa| 3239 /5046，准确率: 72.79%   |
 
 
 ---
@@ -422,3 +422,13 @@ python ./validatelora.py
 ```
 
 ---
+
+
+|method| 多模态的prompt | 生成多种路径的评分机制 | 多模态 |
+|--|------------|-------------|-----|
+ROG| 1          | 1           | 0   |
+vrog|0|0| 1   
+vrog2| 1          | 0           | 1   |
+vrog3| 1          | 1           | 1   |
+
+prompt:rog或者vrog的关于生成关系路径和预测的提示词

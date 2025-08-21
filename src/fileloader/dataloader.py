@@ -243,7 +243,7 @@ class datav():#给vqa用
 class dataf():
     def __init__(self, qapath,imagepath, splitof="val"):
         with open(qapath, "r") as f1:
-            self.combined = []
+            self.all = []
             data = json.load(f1)
             print(type(data))
             for each in data:
@@ -253,27 +253,31 @@ class dataf():
                     os.path.join(imagepath,data[each]["img_file"]),
                     each
                     )
-                self.combined.append(temp)
-        self.length=len(self.combined)
+                self.all.append(temp)
+        self.length=len(self.all)
         self.num_train=self.length*4/5
         self.num_val=self.length-self.num_train
         self.train=[]
         self.val=[]
         for i in range(self.length):
             if i< self.num_train:
-                self.train.append(self.combined[i])
+                self.train.append(self.all[i])
             else:
-                self.val.append(self.combined[i])
+                self.val.append(self.all[i])
+        if splitof=="val":
+            self.combined=self.val
+        elif splitof=="train":
+            self.combined=self.train
 
     def getquestion(self,id):
-        for each in self.combined:
+        for each in self.all:
             if each.id == id:
                 return each.question
             else:
                 return None
 
     def getanswer(self,image_id):
-        for each in self.combined:
+        for each in self.all:
             if each.id == image_id:
                 return each.answer
         warnings.warn("didn't find answer whitch match the id")
