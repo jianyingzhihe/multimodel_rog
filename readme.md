@@ -132,9 +132,7 @@ gemma在okvqa以vrog3方法训练出来的： 946 /  1165, 准确率: 81.20%
 
 fvqa, yes prompt, llama-11b,正确数: 737 / 总数: 1118, 准确率: 65.92%
 
-fvqa, no prompt, llama-11b
-✅ 正确数: 770 / 总数: 1165
-🎯 准确率: 66.09%
+fvqa, no prompt, llama-11b，正确数: 770 / 总数: 1165， 准确率: 66.09%
 
 llama,vrog方法： 840 /  1165, 准确率: 72.10%
 
