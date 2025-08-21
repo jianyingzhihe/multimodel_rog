@@ -176,12 +176,29 @@ qwen在OKVQA上用vrog方法3训练出来的lora:正确数: 1046 / 总数: 1145,
 |qwen|fvqa|okvqa| 3406 /5046，准确率: 67.50%    |
 |gemma|okvqa|fvqa| 678 /  1165, 准确率: 58.20% |
 |gemma|fvqa|okvqa| 3225 /5046，准确率: 63.91%    |
-|llama|okvqa|fvqa|  680 /  1165, 准确率: 58.37% |
+|llama|okvqa|fvqa|  709 /  1165, 准确率: 60.86% |
 |llama|fvqa|okvqa| 3239 /5046，准确率: 72.79%   |
 
+---
+# 模型推断用时测试
+## 以下均是测试500条的结果
+
+### 在fvqa上，不同的模型时间如下
+![fvqa_throughput_comparison.png](res_of_time/fvqa_throughput_comparison.png)
+
+### 在okvqa上，不同模型平均用时如下
+![okvqa_throughput_comparison.png](res_of_time/okvqa_throughput_comparison.png)
+
+### 对于llama模型，其在不同测试集以及是否是lora用时如下
+![llama_inference_time.png](res_of_time/llama_inference_time.png)
+
+### 对于gemma模型，其在不同测试集以及是否是lora用时如下
+![gemma_inference_time.png](res_of_time/gemma_inference_time.png)
+### 对于qwen模型，其在不同测试集以及是否是lora用时如下
+![qwen_inference_time.png](res_of_time/qwen_inference_time.png)
 
 ---
-# 用户需求与解决方案
+# QUICK START
 
 ## 一、用户想要用ROG直接对验证集或者单个KQA问题进行处理
 
