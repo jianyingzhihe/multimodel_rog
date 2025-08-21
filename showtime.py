@@ -29,6 +29,48 @@ print(f"共加载 {len(df['model'].unique())} 个模型, {len(df['dataset'].uniq
 print("模型:", df['model'].unique())
 print("数据集:", df['dataset'].unique())
 
+for dataset_name in df['dataset'].unique():
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(
+        data=df[df['dataset'] == dataset_name],
+        x='iteration',
+        y='average_time',
+        hue='model',
+        linewidth=2.5,
+        palette='Set1'
+    )
+    plt.title(f'Average Inference Time vs Iteration\nDataset: {dataset_name}')
+    plt.xlabel('Iteration')
+    plt.ylabel('Average Time per Sample (s)')
+    plt.legend(title='Model', bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.show()
+
+for model_name in df['model'].unique():
+    plt.figure(figsize=(10, 6))
+
+    # 筛选当前模型的数据
+    subset = df[df['model'] == model_name]
+
+    # 绘制该模型在不同数据集上的 average_time 曲线
+    sns.lineplot(
+        data=subset,
+        x='iteration',
+        y='average_time',
+        hue='dataset',  # 不同数据集用不同颜色
+        style='dataset',  # 不同数据集用不同线型（可选）
+        markers=False,
+        linewidth=2.5,
+        palette='Dark2'
+    )
+
+    plt.title(f'Average Inference Time vs Iteration\nModel: {model_name.upper()}')
+    plt.xlabel('Iteration')
+    plt.ylabel('Average Time per Sample (s)')
+    plt.legend(title='Dataset', loc='upper right')
+    plt.tight_layout()
+    plt.show()
+
 plt.figure(figsize=(12, 8))
 sns.lineplot(
     data=df,
