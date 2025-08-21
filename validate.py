@@ -47,13 +47,7 @@ def generate(model, dataset, outputdir, use_system=True, dataset_type=None):
         print("Output file does not exist, starting from scratch")
     with open(output_path, 'a', encoding='utf-8') as f:
         batch=[]
-        # 根据数据集类型选择正确的数据属性
-        if dataset_type == "fvqa":
-            data_source = dataset.val
-        else:
-            data_source = dataset.combined
-            
-        for each in tqdm.tqdm(data_source, desc="Processing images"):
+        for each in tqdm.tqdm(dataset.combined, desc="Processing images"):
             id = each.id
             if id in td:
                 continue
